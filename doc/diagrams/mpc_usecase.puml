@@ -1,0 +1,13 @@
+@startuml
+title Use Case diagram pro MPC
+left to right direction
+actor :Operator: as OPER
+actor :HoT controller: as HoT
+OPER --> (Zobrazení aktuálních hodnot)
+OPER --> (Nahrání dat z EoT)
+OPER --> (Vizualizace měření)
+OPER --> (Parametrizace)
+OPER --> (Analýza měření)
+note left of (Analýza měření): Vkládání značek\nExport
+HoT --> (Ukládání dat)
+@enduml

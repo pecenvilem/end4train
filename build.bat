@@ -1,0 +1,1 @@
+pyinstaller src\end4train\main.py -F -n TimsMonitor -w

@@ -1,0 +1,47 @@
+@startuml
+title Hnací vozidlo - diagram komponent
+label RF
+frame "Hnací vozidlo" {
+    portin ANT
+
+    frame Strojovna {
+        interface "Volný CAT5 kabel" as i
+        component [HPRS]
+        note bottom of [HPRS]: "HoT Pressure"\nDva kanály pro měření tlaku
+        component [BSE-breakout] as BSEb
+        note bottom of BSEb: Snímán stav 5(6)\nEP ventilů brzdiče
+        label "BSE"
+        label "Hlavní potrubí" as BP
+    }
+
+    frame "Stanoviště 1" {
+        component [HC]
+        interface ETH as ETH1
+        note left of [HC]
+            "HoT Controller"
+            Součástí: display,
+            keypad, indikační LED
+        end note
+        component [MPC] as MPC1 #line.dashed
+
+    }
+
+    frame "Stanoviště 2" {
+        component [MPC] as MPC2 #line.dashed
+    }
+}
+
+[HC] -d- [HPRS]: CAT5 - RS485
+[HC] -d- BSEb: CAT5 - proudové vstupy
+MPC1 .l.( ETH1
+HC -r- ETH1
+ETH1 ). i
+[HC] -u- ANT: RF
+i .d. MPC2
+
+
+ANT -up-( RF
+BSEb -( BSE
+[HPRS] -( BP
+
+@enduml

@@ -1,0 +1,31 @@
+@startuml
+title Celý systém - zjednodušený diagram komponent
+interface RF
+frame "Konec vlaku" {
+    component [End of train] as EoT
+    component [MPC] as MPCe #line.dashed
+    note top of MPCe: Off-line stahování dat
+    label "Hlavní potrubí" as HPe
+}
+frame "Hnací vozidlo" {
+    component [MPC] as MPCh #line.dashed
+    note top of MPCh: Indikace + parametrizace\nNemusí být vždy pripojen
+    component [Head of Train] as HoT
+    label "Hlavní potrubí" as HPh
+    label "Brzdic" as BR
+    :Operator: as OPER
+}
+HoT --( BR
+HoT .. MPCh
+MPCh -left- OPER
+EoT -down-( HPe
+RF - EoT
+EoT . MPCe
+HoT - RF
+HoT -down-( HPh
+note top of RF
+    PMR pro železnici
+    [[https://spektrum.ctu.cz/kmitocty/456-459-mhz?filter%5BfrequencyFrom%5D=400&filter%5BfrequencyFromUnit%5D=MHz&filter%5BfrequencyTo%5D=500&filter%5BfrequencyToUnit%5D=MHz 457,38 – 458,48 MHz (e.r.p. 6 W)]]
+    [[https://spektrum.ctu.cz/kmitocty/460-470-mhz?filter%5BfrequencyFrom%5D=400&filter%5BfrequencyFromUnit%5D=MHz&filter%5BfrequencyTo%5D=500&filter%5BfrequencyToUnit%5D=MHz 467,38 – 468,48 MHz (e.r.p. 6 W)]]
+end note
+@enduml

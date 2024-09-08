@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "end4train"
+version = "0.1.0"
+description = ""
+authors = ["Vilém Pecen <pecenvilem@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "~3.12"
+kaitaistruct = "^0.10"
+pyinstaller = "^6.10.0"
+pandas = "^2.2.2"
+pyside6 = "^6.7.2"
+pyqtgraph = "^0.13.7"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

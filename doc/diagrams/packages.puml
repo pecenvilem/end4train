@@ -1,0 +1,38 @@
+@startuml packages
+set namespaceSeparator none
+
+package "binary_parser" as binary_parser {
+}
+package "communication" as communication {
+}
+package "dataframe_model" as dataframe_model {
+}
+package "log_file" as log_file {
+}
+package "main" as main {
+}
+package "main_window" as main_window {
+}
+package "main_window_ui" as main_window_ui {
+}
+package "monitor" as monitor {
+}
+package "p_packet" as p_packet {
+}
+package "traces_model" as traces_model {
+}
+binary_parser --> log_file
+binary_parser --> p_packet
+communication --> binary_parser
+communication --> p_packet
+log_file --> p_packet
+main --> monitor
+main_window --> dataframe_model
+main_window --> main_window_ui
+main_window --> traces_model
+monitor --> binary_parser
+monitor --> communication
+monitor --> dataframe_model
+monitor --> main_window
+monitor --> traces_model
+@enduml

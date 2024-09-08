@@ -1,0 +1,78 @@
+@startuml classes
+set namespaceSeparator none
+
+class "LogDownloader" as communication.LogDownloader {
+  downloader_socket : socket
+  downloading : bool
+  host : str
+  port : int
+  receive_data_handler : Callable
+  download()
+  stop()
+}
+class "MainWindow" as main_window.MainWindow {
+  request_download_callback : Callable
+  select_traces_callback : Callable
+  toggle_listener_callback : Callable
+  get_selected_host() -> str
+  get_selected_traces()
+  request_download()
+  request_trace_change()
+  toggle_listener()
+}
+class "Monitor" as monitor.Monitor {
+  data : DataFrame
+  data_model: PandasModel
+  downloader: LogDownloader
+  listener: OnLineListener
+  main_window: MainWindow
+  <color:#red>plot: GraphicsLayoutWidget
+  plot_traces : dict
+  traces_model: TracesModel
+  add_data(data, source: DataSource)
+  add_plot(trace: str)
+  delete_plot(trace: str)
+  download_log(host: str)
+  load_file()
+  run()
+  select_traces(selection)
+  shutdown()
+  toggle_listener(host: str, listen: bool)
+  update_plot(traces: List[str])
+}
+class "OnLineListener" as communication.OnLineListener {
+  host : str
+  listener_socket : socket
+  listening : bool
+  port : int
+  receive_data_handler: Callable
+  listen(host: str)
+  stop(host: str)
+}
+class "PandasModel" as dataframe_model.PandasModel {
+  dataframe: DataFrame
+  columnCount(parent) -> int
+  data(index: QModelIndex, role)
+  headerData(section: int, orientation: Qt.Orientation, role: Qt.ItemDataRole)
+  rowCount(parent) -> int
+  set_new_data(data: pd.DataFrame)
+}
+class "TracesModel" as traces_model.TracesModel {
+  traces : list
+  data(index, role)
+  rowCount(index)
+  update_traces(traces)
+}
+class "Ui_MainWindow" as main_window_ui.Ui_MainWindow {
+  chart_view : GraphicsLayoutWidget
+  table_view
+  traces_list_view
+  setupUi(MainWindow)
+}
+monitor.Monitor o-- dataframe_model.PandasModel
+monitor.Monitor o-- main_window.MainWindow
+monitor.Monitor o- communication.LogDownloader
+monitor.Monitor o-l- communication.OnLineListener
+monitor.Monitor o-- traces_model.TracesModel
+main_window.MainWindow <|-- main_window_ui.Ui_MainWindow
+@enduml

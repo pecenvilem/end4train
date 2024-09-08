@@ -1,0 +1,21 @@
+@startuml
+title Konec vlaku - diagram komponent
+label RF
+frame "Konec vlaku" {
+    label "Hlavní potrubí" as BP
+    interface ETH
+    portin ANT
+    component [EoT controller]
+    note bottom of [EoT controller]
+        Součástí: display,
+        jazýčkový spínač,
+        indikační LED
+    end note
+    component [HPC] #line.dashed
+}
+ANT -- [EoT controller]
+ANT -up-( RF
+[EoT controller] -right-( BP
+[EoT controller] -- ETH
+ETH ).. [HPC]: CAT5 - ETH
+@enduml
