@@ -103,13 +103,29 @@ class Monitor:
         self.update_plot(list(self.plot_traces.keys()))
 
     def draw_device_position(self):
-        hot_history = self.data[["hot_north", "hot_east"]].dropna(how="any")
-        hot_current = get_coordinates(hot_history.sort_index(ascending=False).head(1), device="hot")
-        hot_trace = get_coordinates(hot_history.sort_index(ascending=False).head(6), device="hot")
+        map_object = folium.Map()
 
-        eot_history = self.data[["eot_north", "eot_east"]].dropna(how="any")
-        eot_current = get_coordinates(eot_history.sort_index(ascending=False).head(1), device="eot")
-        eot_trace = get_coordinates(eot_history.sort_index(ascending=False).head(6), device="eot")
+        try:
+            hot_history = self.data[["hot_north", "hot_east"]].dropna(how="any")
+        except KeyError:
+            hot_history = pd.DataFrame(columns=["hot_north", "hot_east"])
+            hot_trace = get_coordinates(hot_history.sort_index(ascending=False).head(6), device="hot")
+        else:
+            hot_current = get_coordinates(hot_history.sort_index(ascending=False).head(1), device="hot")
+            hot_trace = get_coordinates(hot_history.sort_index(ascending=False).head(6), device="hot")
+            folium.Marker(location=hot_current[0], icon=folium.Icon(color="red"), tooltip="HoT").add_to(map_object)
+            folium.PolyLine(locations=hot_trace, color="red").add_to(map_object)
+
+        try:
+            eot_history = self.data[["eot_north", "eot_east"]].dropna(how="any")
+        except KeyError:
+            eot_history = pd.DataFrame(columns=["hot_north", "hot_east"])
+            eot_trace = get_coordinates(eot_history.sort_index(ascending=False).head(6), device="eot")
+        else:
+            eot_current = get_coordinates(eot_history.sort_index(ascending=False).head(1), device="eot")
+            eot_trace = get_coordinates(eot_history.sort_index(ascending=False).head(6), device="eot")
+            folium.Marker(location=eot_current[0], icon=folium.Icon(color="blue"), tooltip="EoT").add_to(map_object)
+            folium.PolyLine(locations=eot_trace, color="blue").add_to(map_object)
 
         min_lat = min(north for (north, east) in eot_trace + hot_trace)
         max_lat = max(north for (north, east) in eot_trace + hot_trace)
@@ -117,11 +133,6 @@ class Monitor:
         min_lon = min(east for (north, east) in eot_trace + hot_trace)
         max_lon = max(east for (north, east) in eot_trace + hot_trace)
 
-        map_object = folium.Map()
-        folium.Marker(location=hot_current[0], icon=folium.Icon(color="red"), tooltip="HoT").add_to(map_object)
-        folium.Marker(location=eot_current[0], icon=folium.Icon(color="blue"), tooltip="EoT").add_to(map_object)
-        folium.PolyLine(locations=hot_trace, color="red").add_to(map_object)
-        folium.PolyLine(locations=eot_trace, color="blue").add_to(map_object)
 
         map_object.fit_bounds([(min_lat, min_lon), (max_lat, max_lon)])
 
