@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from PySide6.QtWidgets import QApplication, QFileDialog
+import folium
 from pandas.core.dtypes.common import is_numeric_dtype
 from haversine import haversine_vector, Unit
 
@@ -13,6 +14,10 @@ from end4train.binary_parser import get_records_from_log_file, get_process_data_
 from end4train.traces_model import TracesModel
 from end4train.main_window import MainWindow
 from end4train.dataframe_model import PandasModel
+
+
+GPS_COLUMNS = ["eot_north", "eot_east", "hot_north", "hot_east"]
+DEFAULT_GPS = (50.0833989, 14.4166467)
 
 
 def has_both_device_coordinates(data: pd.DataFrame) -> bool:
@@ -49,8 +54,10 @@ class Monitor:
 
         self._app.aboutToQuit.connect(self.shutdown)
 
+        default_map = folium.Map(location=DEFAULT_GPS)
+
         self.main_window = MainWindow(
-            self.toggle_listener, self.download_log, self.select_traces, self.traces_model, self.data_model,
+            self.toggle_listener, self.download_log, self.select_traces, self.traces_model, self.data_model, default_map
         )
 
         self.plot = self.main_window.chart_view
@@ -88,11 +95,37 @@ class Monitor:
 
         dataframe["distance"] = calculate_device_distance(dataframe)
         self.data = pd.concat([self.data, dataframe])
+        self.main_window.show_map(self.draw_device_position())
         self.data = self.data.sort_index()
         selected_traces = self.main_window.get_selected_traces()
         self.data_model.set_new_data(self.data[selected_traces])
         self.traces_model.update_traces(self.data.columns.tolist())
         self.update_plot(list(self.plot_traces.keys()))
+
+    def draw_device_position(self):
+        hot_history = self.data[["hot_north", "hot_east"]].dropna(how="any")
+        hot_current = get_coordinates(hot_history.sort_index(ascending=False).head(1), device="hot")
+        hot_trace = get_coordinates(hot_history.sort_index(ascending=False).head(6), device="hot")
+
+        eot_history = self.data[["eot_north", "eot_east"]].dropna(how="any")
+        eot_current = get_coordinates(eot_history.sort_index(ascending=False).head(1), device="eot")
+        eot_trace = get_coordinates(eot_history.sort_index(ascending=False).head(6), device="eot")
+
+        min_lat = min(north for (north, east) in eot_trace + hot_trace)
+        max_lat = max(north for (north, east) in eot_trace + hot_trace)
+
+        min_lon = min(east for (north, east) in eot_trace + hot_trace)
+        max_lon = max(east for (north, east) in eot_trace + hot_trace)
+
+        map_object = folium.Map()
+        folium.Marker(location=hot_current[0], icon=folium.Icon(color="red"), tooltip="HoT").add_to(map_object)
+        folium.Marker(location=eot_current[0], icon=folium.Icon(color="blue"), tooltip="EoT").add_to(map_object)
+        folium.PolyLine(locations=hot_trace, color="red").add_to(map_object)
+        folium.PolyLine(locations=eot_trace, color="blue").add_to(map_object)
+
+        map_object.fit_bounds([(min_lat, min_lon), (max_lat, max_lon)])
+
+        return map_object
 
     def toggle_listener(self, host: str, listen: bool):
         if listen:

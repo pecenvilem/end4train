@@ -1,3 +1,4 @@
+from io import BytesIO
 from typing import Callable
 
 from PySide6.QtWidgets import QMainWindow, QAbstractItemView
@@ -14,6 +15,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                  select_traces_callback: Callable,
                  trace_item_model: TracesModel,
                  data_table_model: PandasModel,
+                 map_object
                  ):
         super().__init__()
         self.setupUi(self)
@@ -25,6 +27,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.traces_list_view.setModel(trace_item_model)
         self.traces_list_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.table_view.setModel(data_table_model)
+
+        self.show_map(map_object)
 
         self.chart_view.setBackground("white")
 
@@ -51,3 +55,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def get_selected_traces(self):
         return list(item.data() for item in self.traces_list_view.selectionModel().selectedRows())
+
+    def show_map(self, map_object) -> None:
+        data = BytesIO()
+        map_object.save(data, close_file=False)
+        self.web_engine_view.setHtml(data.getvalue().decode())

@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'monitor_main_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.0
+## Created by: Qt User Interface Compiler version 6.7.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -15,6 +15,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (QApplication, QCheckBox, QGroupBox, QHBoxLayout,
     QHeaderView, QLabel, QListView, QMainWindow,
     QPushButton, QRadioButton, QSizePolicy, QSpacerItem,
@@ -48,7 +49,7 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout.addWidget(self.eot_btn)
 
-        self.horizontalSpacer = QSpacerItem(262, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer = QSpacerItem(262, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
 
@@ -99,26 +100,24 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_2 = QVBoxLayout()
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.label = QLabel(self.centralwidget)
-        self.label.setObjectName(u"label")
-
-        self.verticalLayout_2.addWidget(self.label)
-
         self.table_view = QTableView(self.centralwidget)
         self.table_view.setObjectName(u"table_view")
 
         self.verticalLayout_2.addWidget(self.table_view)
 
+        self.web_engine_view = QWebEngineView(self.centralwidget)
+        self.web_engine_view.setObjectName(u"web_engine_view")
+        self.web_engine_view.setUrl(QUrl(u"about:blank"))
+
+        self.verticalLayout_2.addWidget(self.web_engine_view)
+
+        self.verticalLayout_2.setStretch(0, 1)
+        self.verticalLayout_2.setStretch(1, 1)
 
         self.horizontalLayout_2.addLayout(self.verticalLayout_2)
 
         self.verticalLayout_4 = QVBoxLayout()
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
-        self.label_2 = QLabel(self.centralwidget)
-        self.label_2.setObjectName(u"label_2")
-
-        self.verticalLayout_4.addWidget(self.label_2)
-
         self.chart_view = GraphicsLayoutWidget(self.centralwidget)
         self.chart_view.setObjectName(u"chart_view")
 
@@ -148,7 +147,5 @@ class Ui_MainWindow(object):
         self.groupBox_3.setTitle(QCoreApplication.translate("MainWindow", u"Log", None))
         self.load_btn.setText(QCoreApplication.translate("MainWindow", u"Download", None))
         self.open_btn.setText(QCoreApplication.translate("MainWindow", u"Open file", None))
-        self.label.setText(QCoreApplication.translate("MainWindow", u"Data", None))
-        self.label_2.setText(QCoreApplication.translate("MainWindow", u"Plot", None))
     # retranslateUi
 
