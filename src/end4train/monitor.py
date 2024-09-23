@@ -1,9 +1,11 @@
-from typing import List
+from typing import List, Literal, NamedTuple
 
+import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from PySide6.QtWidgets import QApplication, QFileDialog
 from pandas.core.dtypes.common import is_numeric_dtype
+from haversine import haversine_vector, Unit
 
 from end4train.communication import OnLineListener, LogDownloader
 from end4train.binary_parser import DataSource, get_data_from_process_data
@@ -11,6 +13,25 @@ from end4train.binary_parser import get_records_from_log_file, get_process_data_
 from end4train.traces_model import TracesModel
 from end4train.main_window import MainWindow
 from end4train.dataframe_model import PandasModel
+
+
+def has_both_device_coordinates(data: pd.DataFrame) -> bool:
+    return all([column in data.columns for column in GPS_COLUMNS])
+
+
+def get_coordinates(data: pd.DataFrame, device: Literal["eot", "hot"]) -> list[NamedTuple]:
+    if device == "eot":
+        return list(data[["eot_north", "eot_east"]].itertuples(index=False))
+    return list(data[["hot_north", "hot_east"]].itertuples(index=False))
+
+
+def calculate_device_distance(data: pd.DataFrame) -> pd.Series:
+    if not has_both_device_coordinates(data):
+        return pd.Series(np.nan, index=data.index)
+    data = data[GPS_COLUMNS].replace(0, np.nan)
+    eot_position = get_coordinates(data, "eot")
+    hot_position = get_coordinates(data, "hot")
+    return haversine_vector(eot_position, hot_position, unit=Unit.METERS, check=False)
 
 
 class Monitor:
@@ -55,6 +76,17 @@ class Monitor:
         else:
             return
         dataframe = get_data_from_process_data(process_data)
+
+        # # # TODO: testing - remove
+        # if not has_both_device_coordinates(dataframe):
+        #     dataframe["hot_north"] = np.random.uniform(49.6167797, 49.6220208, len(dataframe))
+        #     dataframe["hot_east"] = np.random.uniform(15.5042428, 15.4904025, len(dataframe))
+        #     dataframe["eot_north"] = np.random.uniform(49.6167797, 49.6220208, len(dataframe))
+        #     dataframe["eot_east"] = np.random.uniform(15.5042428, 15.4904025, len(dataframe))
+        #     pass
+        # # # TODO: testing - remove
+
+        dataframe["distance"] = calculate_device_distance(dataframe)
         self.data = pd.concat([self.data, dataframe])
         self.data = self.data.sort_index()
         selected_traces = self.main_window.get_selected_traces()

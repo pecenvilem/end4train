@@ -12,6 +12,9 @@ pyinstaller = "^6.10.0"
 pandas = "^2.2.2"
 pyside6 = "^6.7.2"
 pyqtgraph = "^0.13.7"
+folium = "^0.17.0"
+haversine = "^2.8.1"
+numba = "^0.60.0"
 
 
 [build-system]
