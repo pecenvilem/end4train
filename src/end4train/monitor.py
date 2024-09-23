@@ -15,6 +15,9 @@ from end4train.main_window import MainWindow
 from end4train.dataframe_model import PandasModel
 
 
+GPS_COLUMNS = ["eot_north", "eot_east", "hot_north", "hot_east"]
+
+
 def has_both_device_coordinates(data: pd.DataFrame) -> bool:
     return all([column in data.columns for column in GPS_COLUMNS])
 
