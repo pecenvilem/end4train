@@ -89,9 +89,15 @@ class Monitor:
         #     pass
         # # # TODO: testing - remove
 
-        dataframe["distance"] = calculate_device_distance(dataframe)
+        try:
+            dataframe["distance"] = calculate_device_distance(dataframe)
+        except KeyError:
+            return
+        dataframe = dataframe.ffill()
         self.data = pd.concat([self.data, dataframe])
+        self.data["distance"] = calculate_device_distance(self.data)
         self.data = self.data.sort_index()
+        self.data = self.data.ffill()
         selected_traces = self.main_window.get_selected_traces()
         self.data_model.set_new_data(self.data[selected_traces])
         self.traces_model.update_traces(self.data.columns.tolist())
