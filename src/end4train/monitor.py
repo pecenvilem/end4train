@@ -6,10 +6,10 @@ from PySide6.QtWidgets import QApplication, QFileDialog
 from pandas.core.dtypes.common import is_numeric_dtype
 
 from end4train.communication import OnLineListener, LogDownloader
-from end4train.binary_parser import DataSource, get_data_from_process_data
+from end4train.binary_parser import DataSource, get_data_from_process_data, parse_log
 from end4train.binary_parser import get_records_from_log_file, get_process_data_from_p_packet, get_process_data_from_records
 from end4train.traces_model import TracesModel
-from end4train.main_window import MainWindow
+from end4train.ui.main_window import MainWindow
 from end4train.dataframe_model import PandasModel
 
 
@@ -48,13 +48,12 @@ class Monitor:
 
     def add_data(self, data, source: DataSource):
         if source == DataSource.LOG_FILE:
-            records = get_records_from_log_file(data)
-            process_data = get_process_data_from_records(records)
+            dataframe = parse_log(data)
         elif source == DataSource.P_PACKET:
             process_data = get_process_data_from_p_packet(data)
+            dataframe = get_data_from_process_data(process_data)
         else:
             return
-        dataframe = get_data_from_process_data(process_data)
         self.data = pd.concat([self.data, dataframe])
         self.data = self.data.sort_index()
         selected_traces = self.main_window.get_selected_traces()
