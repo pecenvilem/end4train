@@ -1,13 +1,13 @@
 import zlib
-from enum import Enum, auto
-from typing import Iterator, Tuple
+from enum import Enum, auto, StrEnum
+from typing import Iterator, Tuple, Any
 
 import pandas as pd
 
 from operator import attrgetter
 
 from end4train.parsers.log_file import LogFile
-from end4train.parsers.p_packet import PPacket
+# from end4train.parsers.p_packet import PPacket
 from end4train.parsers.record_object import RecordObject
 from end4train.parsers.process_data import ProcessData
 
@@ -17,34 +17,26 @@ class DataSource(Enum):
     P_PACKET = auto()
 
 
+class SourceDevice(StrEnum):
+    HOT = auto()
+    EOT = auto()
+    UNDEFINED = ""
+
+
 SOURCE_DEVICES = {
-    RecordObject.ObjectTypeEnum.dict_version: "",
-    RecordObject.ObjectTypeEnum.pressure_current_eot: "eot",
-    RecordObject.ObjectTypeEnum.pressure_current_hot: "hot",
-    RecordObject.ObjectTypeEnum.pressure_history_eot: "eot",
-    RecordObject.ObjectTypeEnum.pressure_history_hot: "hot",
-    RecordObject.ObjectTypeEnum.gps_eot: "eot",
-    RecordObject.ObjectTypeEnum.gps_hot: "hot",
-    RecordObject.ObjectTypeEnum.fault_eot: "eot",
-    RecordObject.ObjectTypeEnum.fault_hot: "hot",
-    RecordObject.ObjectTypeEnum.eot_temp: "eot",
-    RecordObject.ObjectTypeEnum.hot_temp: "hot",
-    RecordObject.ObjectTypeEnum.brake: "hot",
+    RecordObject.ObjectTypeEnum.dict_version: SourceDevice.UNDEFINED,
+    RecordObject.ObjectTypeEnum.pressure_current_eot: SourceDevice.EOT,
+    RecordObject.ObjectTypeEnum.pressure_current_hot: SourceDevice.HOT,
+    RecordObject.ObjectTypeEnum.pressure_history_eot: SourceDevice.EOT,
+    RecordObject.ObjectTypeEnum.pressure_history_hot: SourceDevice.HOT,
+    RecordObject.ObjectTypeEnum.gps_eot: SourceDevice.EOT,
+    RecordObject.ObjectTypeEnum.gps_hot: SourceDevice.HOT,
+    RecordObject.ObjectTypeEnum.fault_eot: SourceDevice.EOT,
+    RecordObject.ObjectTypeEnum.fault_hot: SourceDevice.HOT,
+    RecordObject.ObjectTypeEnum.eot_temp: SourceDevice.EOT,
+    RecordObject.ObjectTypeEnum.hot_temp: SourceDevice.HOT,
+    RecordObject.ObjectTypeEnum.brake: SourceDevice.HOT,
 }
-
-def get_variable_names(record_object: RecordObject) -> list[str]:
-    """
-
-    :param record_object:
-    :return:
-    """
-    variable_names = []
-    for attr_name in dir(record_object):
-        if attr_name.startswith("_"):
-            continue
-        if "raw" in attr_name:
-            continue
-    return variable_names
 
 DATA_EXTRACTORS = {
     RecordObject.DictionaryVersion: {
@@ -102,26 +94,8 @@ DATA_EXTRACTORS = {
 
 
 def get_records_from_log_file(stream: bytes) -> list:
-    log_file = LogFile.from_bytes(stream)
-    log_file._read()
 
-    for sector in log_file.sectors.copy():
-        if zlib.adler32(sector.previous_sector_data + sector._raw_records, 0) != sector.header.check_sum:
-            log_file.sectors.remove(sector)
-
-    records = [record for sector in log_file.sectors for record in sector.records.records]
-
-    # TODO: modify log_file.ksy to only leave the last record in the "unprocessed data", don't use the magic number 51
-
-    for sector, next_sector in zip(log_file.sectors[:-1], log_file.sectors[1:]):
-        if sector.header.serial_number + 1 != next_sector.header.serial_number:
-            continue
-        data = sector.records.next_sector_data + next_sector.previous_sector_data
-        record_array = LogFile.RecordArray.from_bytes(data)
-        record_array._read()
-        records.extend(record_array.records)
-
-    return records
+    return []
 
 
 def get_process_data_from_p_packet(stream: bytes) -> Iterator[Tuple[float, ProcessData]]:

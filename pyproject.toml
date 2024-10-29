@@ -20,6 +20,8 @@ pyarrow = "^17.0.0"
 [tool.poetry.group.build.dependencies]
 pyinstaller = "^6.11.0"
 kaitaistruct = {git = "https://github.com/kaitai-io/kaitai_struct_python_runtime.git"}
+pyyaml = "^6.0.2"
+
 
 [build-system]
 requires = ["poetry-core"]
