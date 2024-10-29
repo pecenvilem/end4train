@@ -7,53 +7,17 @@ from pathlib import Path
 
 from yaml import safe_load
 
-# from end4train.binary_parser import get_records_from_log_file, record_objects_to_list_of_series, parse_log, \
-#     get_process_data_from_records, get_data_from_process_data
 from end4train.parsers.log_file import LogFile
 from end4train.parsers.record_array import RecordArray
 from end4train.parsers.record_object import RecordObject
 
 RECORD_OBJECT_KSY_PATH = Path("..") / "kaitai" / "specs" / "record_object.ksy"
 
-DATA_VARIABLES: dict[Any, list[str]] = {
-    RecordObject.DictionaryVersion: ["version", ],
-    RecordObject.PressureTuple: ["pressure_a", "pressure_b", ],
-    RecordObject.PressureArray: ["pressure_a_record", ],
-    RecordObject.Gps: ["north", "east", "alt", "speed", "azimuth", ],
-    RecordObject.Fault: [
-        "fault_rxmac", "fault_nogps", "fault_vref", "fault_vcc", "fault_24v", "fault_hotprs", "fault_accel",
-        "fault_batt", "fault_dict_mismatch", "fault_lm75", "fault_btemp", "fault_flash", "fault_logger", "fault_objbuf",
-        "fault_txbuf",
-    ],
-    RecordObject.EotPower: [
-        "temp", "soc", "battery_voltage", "turbine_run", "x1_voltage_high", "battery_full", "radio_high_power",
-        "balancer_burn", "turbine_run_time",
-    ],
-    RecordObject.Temperature: ["temp", ],
-    RecordObject.BrakeArray: ["brake_record", ],
-}
-
 
 class SourceDevice(StrEnum):
     HOT = "hot"
     EOT = "eot"
     UNDEFINED = ""
-
-
-SOURCE_DEVICES = {
-    RecordObject.ObjectTypeEnum.dict_version: SourceDevice.UNDEFINED,
-    RecordObject.ObjectTypeEnum.pressure_current_eot: SourceDevice.EOT,
-    RecordObject.ObjectTypeEnum.pressure_current_hot: SourceDevice.HOT,
-    RecordObject.ObjectTypeEnum.pressure_history_eot: SourceDevice.EOT,
-    RecordObject.ObjectTypeEnum.pressure_history_hot: SourceDevice.HOT,
-    RecordObject.ObjectTypeEnum.gps_eot: SourceDevice.EOT,
-    RecordObject.ObjectTypeEnum.gps_hot: SourceDevice.HOT,
-    RecordObject.ObjectTypeEnum.fault_eot: SourceDevice.EOT,
-    RecordObject.ObjectTypeEnum.fault_hot: SourceDevice.HOT,
-    RecordObject.ObjectTypeEnum.eot_temp: SourceDevice.EOT,
-    RecordObject.ObjectTypeEnum.hot_temp: SourceDevice.HOT,
-    RecordObject.ObjectTypeEnum.brake: SourceDevice.HOT,
-}
 
 
 def load_device_per_object_type(path: Path) -> dict[int, str]:
@@ -111,10 +75,6 @@ def load_data_variables_per_object_type(path: Path) -> dict[int, list[str]]:
 DATA_VARIABLES_FOR_DATA_OBJECT_TYPE = load_data_variables_per_object_type(RECORD_OBJECT_KSY_PATH)
 
 
-def get_variable_names(data_object: RecordObject) -> list[str]:
-    return DATA_VARIABLES[type(data_object.object)]
-
-
 def get_variable_names_for_data_object_type(data_object_type: int) -> list[str]:
     return DATA_VARIABLES_FOR_DATA_OBJECT_TYPE[data_object_type]
 
@@ -124,10 +84,6 @@ def get_variables_via_object_type(data_object: RecordObject) -> dict[str, Any]:
         key: getattr(data_object.object, key)
         for key in DATA_VARIABLES_FOR_DATA_OBJECT_TYPE.get(data_object.object_type, [])
     }
-
-
-def get_variables(data_object: RecordObject) -> dict[str, Any]:
-    return {key: getattr(data_object.object, key) for key in get_variable_names(data_object)}
 
 
 def is_sector_checksum_valid(body: bytes | bytearray, check_sum: int) -> bool:
@@ -198,23 +154,17 @@ def test_log_file_load():
     data_objects["timestamp"] = data_records["timestamp"]
     data_objects["type"] = data_objects["record_object"].apply(lambda data_object: data_object.object_type)
     data_objects = data_objects.set_index(['type'], append=True)
-    data_objects["variables"] = data_objects["record_object"].apply(
-        lambda data_object: DATA_VARIABLES[type(data_object.object)]
-    )
 
-    # variables_series = data_objects.apply(lambda row: get_variables(row["record_object"]), axis="columns")
     variables_series = data_objects.apply(
         lambda row: get_variables_via_object_type(row["record_object"]), axis="columns"
     )
     variables = pd.DataFrame(data=pd.json_normalize(variables_series))
     variables.index = data_objects.index
 
-    # devices = pd.Series(SOURCE_DEVICES, name="device")
     devices = pd.Series(SOURCE_DEVICES_PER_OBJECT_TYPE, name="device")
     variables = pd.melt(variables, ignore_index=False).dropna().sort_index()
     variables = variables.merge(devices, left_on="type", right_index=True)
     variables = variables.join(data_objects["timestamp"])
-
 
     pass
 
