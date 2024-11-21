@@ -2,9 +2,12 @@ import zlib
 from enum import StrEnum
 from typing import Any
 
+import numpy as np
 import pandas as pd
 from pathlib import Path
 
+from geopandas import GeoDataFrame, GeoSeries, points_from_xy
+from shapely import empty, GeometryType
 from yaml import safe_load
 
 from end4train.parsers.log_file import LogFile
@@ -125,20 +128,9 @@ def join_sector_bodies(sectors: pd.DataFrame) -> bytearray:
     return data_content
 
 
-def test_log_file_load():
-    # file = Path("data") / "20240318" / "eot.dat"
-    file = Path("data") / "20240923" / "hot.dat"
-
-    log_file = LogFile.from_bytes(file.read_bytes())
-    log_file._read()
-
-    sectors = get_sector_dataframe(log_file)
-    contiguous_sector_blocks = sectors.groupby("sequence_id").apply(join_sector_bodies)
-
-    block = contiguous_sector_blocks.iloc[0]
+def parse_block(block: bytes | bytearray) -> pd.DataFrame:
     record_array = RecordArray.from_bytes(block)
     record_array._read()
-
     record_dict = {"body": [], "incomplete": [], "size": [], "type": [], "timestamp": []}
     for record in record_array.records:
         record_dict["incomplete"].append(record.incomplete)
@@ -149,24 +141,110 @@ def test_log_file_load():
     records = pd.DataFrame(record_dict)
     complete_records = records.loc[~records["incomplete"]]
     data_records = complete_records.loc[records["type"] == RecordArray.RecordType.data]
-
     data_objects = pd.DataFrame({"record_object": data_records["body"].apply(lambda body: body.data.records).explode()})
     data_objects["timestamp"] = data_records["timestamp"]
     data_objects["type"] = data_objects["record_object"].apply(lambda data_object: data_object.object_type)
     data_objects = data_objects.set_index(['type'], append=True)
-
     variables_series = data_objects.apply(
         lambda row: get_variables_via_object_type(row["record_object"]), axis="columns"
     )
     variables = pd.DataFrame(data=pd.json_normalize(variables_series))
     variables.index = data_objects.index
-
     devices = pd.Series(SOURCE_DEVICES_PER_OBJECT_TYPE, name="device")
     variables = pd.melt(variables, ignore_index=False).dropna().sort_index()
     variables = variables.merge(devices, left_on="type", right_index=True)
     variables = variables.join(data_objects["timestamp"])
+    variables["timestamp"] = pd.to_datetime(variables["timestamp"], unit="s")
+    return variables.reset_index(drop=False, names=["process_data_object_id", "data_object_type"])
 
-    pass
+
+def load_file(path: Path) -> pd.DataFrame:
+    log_file = LogFile.from_bytes(path.read_bytes())
+    log_file._read()
+
+    sectors = get_sector_dataframe(log_file)
+    contiguous_sector_blocks = sectors.groupby("sequence_id").apply(join_sector_bodies)
+
+    parsed_blocks = [parse_block(block) for block in contiguous_sector_blocks]
+    data = pd.concat(parsed_blocks)
+    return data.sort_values(by=["timestamp", "device"])
+
+
+def test_log_file_load():
+    # hot_file = Path("data") / "20240923" / "hot.dat"
+    # eot_file = Path("data") / "20240923" / "eot.dat"
+    #
+    # hot_data = load_file(hot_file)
+    # eot_data = load_file(eot_file)
+
+    hot_data = pd.read_parquet(Path("data") / "20240923" / "cache" / "20241029" / "hot.parquet")
+    eot_data = pd.read_parquet(Path("data") / "20240923" / "cache" / "20241029" / "eot.parquet")
+
+    hot_data["loaded_from"] = "hot"
+    eot_data["loaded_from"] = "eot"
+
+    data = pd.concat([hot_data, eot_data])
+    data = data[["timestamp", "loaded_from", "device", "variable", "value"]].sort_values("timestamp", ignore_index=True)
+    data["data_object_received"] = (data["loaded_from"] == "hot") & (data["device"] == "eot")
+
+    data = pd.concat([data, data.pivot(columns="variable", values="value")], axis="columns")
+    data = data.drop(["variable", "value"], axis="columns")
+    data[["north", "east"]] = data[["north", "east"]].replace(0, np.nan)
+
+    coordinates = data.groupby(by=["timestamp", "loaded_from", "device"])[["north", "east"]].first().reset_index()
+
+    eot_recorded_position = coordinates.loc[
+        (coordinates["loaded_from"] == "eot") & (coordinates["device"] == "eot"), ["timestamp", "north", "east"]]
+    eot_recorded_position = GeoSeries.from_xy(
+        eot_recorded_position["east"], eot_recorded_position["north"], index=eot_recorded_position["timestamp"],
+        name="eot_recorded_position", crs="epsg:4326"
+    )
+
+    hot_recorded_position = coordinates.loc[
+        (coordinates["loaded_from"] == "hot") & (coordinates["device"] == "hot"), ["timestamp", "north", "east"]
+    ]
+    hot_recorded_position = GeoSeries.from_xy(
+        hot_recorded_position["east"], hot_recorded_position["north"], index=hot_recorded_position["timestamp"],
+        name="hot_recorded_position", crs="epsg:4326"
+    )
+
+    eot_received_position = coordinates.loc[
+        (coordinates["loaded_from"] == "hot") & (coordinates["device"] == "eot"), ["timestamp", "north", "east"]
+    ]
+    eot_received_position = GeoSeries.from_xy(
+        eot_received_position["east"], eot_received_position["north"], index=eot_received_position["timestamp"],
+        name="eot_received_position", crs="epsg:4326"
+    )
+
+    data_object_received = data.groupby("timestamp")["data_object_received"].any()
+    radio_power = data.groupby("timestamp")["radio_high_power"].first()
+    unique_power_values_per_epoch = data.groupby("timestamp")["radio_high_power"].nunique()
+    contradicting_epochs = unique_power_values_per_epoch[unique_power_values_per_epoch > 1]
+
+    data = pd.concat(
+        [radio_power, data_object_received, hot_recorded_position, eot_received_position, eot_recorded_position], axis="columns"
+    )
+    data.loc[data["radio_high_power"] == 1, "radio_power"] = "high"
+    data.loc[data["radio_high_power"] == 0, "radio_power"] = "low"
+    data = data.drop("radio_high_power", axis="columns")
+    data["hot_position"] = data["hot_recorded_position"]
+    data["eot_position"] = data["eot_received_position"]
+    data.loc[
+        data["eot_position"].isna(), "eot_position"
+    ] = data.loc[data["eot_position"].isna(), "eot_recorded_position"]
+    data = data.drop(["hot_recorded_position", "eot_received_position", "eot_recorded_position"], axis="columns")
+
+    gdf = GeoDataFrame(data)
+    gdf.index = gdf.index.strftime("%Y-%m-%d %X")
+    lines = gdf.melt(value_vars=["eot_position", "hot_position"], var_name="device", value_name="position",
+             ignore_index=False).set_geometry("position").dissolve(by="timestamp").convex_hull
+    lines = lines[lines.count_coordinates() >= 2]
+    lines.name = "line"
+    lines = pd.merge(lines, gdf["data_object_received"], left_index=True, right_index=True)
+
+    gdf[gdf.columns.difference(["eot_position"])].to_file("hot.shp")
+    gdf[gdf.columns.difference(["hot_position"])].to_file("eot.shp")
+    lines.to_file("lines.shp")
 
 
 if __name__ == "__main__":
