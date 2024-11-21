@@ -1,5 +1,7 @@
 from typing import Callable
 
+from PySide6.QtCore import QUrl
+from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtWidgets import QMainWindow, QAbstractItemView
 
 from end4train.traces_model import TracesModel
@@ -24,13 +26,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.select_traces_callback = select_traces_callback
         self.traces_list_view.setModel(trace_item_model)
         self.traces_list_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.table_view.setModel(data_table_model)
+        self.table.setModel(data_table_model)
 
-        self.chart_view.setBackground("white")
+        self.plot.setBackground("white")
 
         self.record_box.stateChanged.connect(self.toggle_listener)
         self.load_btn.clicked.connect(self.request_download)
         self.traces_list_view.clicked.connect(self.request_trace_change)
+
+        self.map.setSource(QUrl.fromLocalFile("ui/map.qml"))
+        print(self)
+        self.map.show()
 
     def toggle_listener(self):
         self.toggle_listener_callback(

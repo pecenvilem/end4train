@@ -32,7 +32,7 @@ class Monitor:
             self.toggle_listener, self.download_log, self.select_traces, self.traces_model, self.data_model,
         )
 
-        self.plot = self.main_window.chart_view
+        self.plot = self.main_window.plot
         self.main_window.open_btn.clicked.connect(self.load_file)
 
         self.main_window.show()

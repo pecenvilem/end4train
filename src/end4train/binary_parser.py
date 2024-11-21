@@ -7,9 +7,10 @@ import pandas as pd
 from operator import attrgetter
 
 from end4train.parsers.log_file import LogFile
-# from end4train.parsers.p_packet import PPacket
+from end4train.parsers.p_packet import PPacket
 from end4train.parsers.record_object import RecordObject
 from end4train.parsers.process_data import ProcessData
+from end4train.parsers.record_array import RecordArray
 
 
 class DataSource(Enum):
@@ -103,14 +104,14 @@ def get_process_data_from_p_packet(stream: bytes) -> Iterator[Tuple[float, Proce
     return ((packet.epoch_number, packet.body) for _ in range(1))
 
 
-def filter_records(records: list, record_type: LogFile.RecordType):
+def filter_records(records: list, record_type: RecordArray.RecordType):
     return list([
         record for record in records if record.rec_type == record_type
     ])
 
 
 def get_texts_from_records(records: list) -> pd.DataFrame:
-    text_records = filter_records(records, LogFile.RecordType.text)
+    text_records = filter_records(records, RecordArray.RecordType.text)
     timestamps = [record.time_of_record + record.text.milliseconds / 1000 for record in text_records]
     texts = [record.text.text for record in text_records]
     return pd.DataFrame({"time": pd.to_datetime(timestamps, unit="s"), "text": texts}).sort_index()
@@ -151,7 +152,7 @@ def get_data_from_process_data(process_data: Iterator[Tuple[float, ProcessData]]
 
 
 def get_process_data_from_records(records: list) -> Iterator[Tuple[float, ProcessData]]:
-    data_records = filter_records(records, LogFile.RecordType.data)
+    data_records = filter_records(records, RecordArray.RecordType.data)
     return ((record.time_of_record, record.data.data) for record in data_records)
 
 
@@ -166,10 +167,10 @@ def parse_log(stream: bytes) -> pd.DataFrame:
     return get_data_from_process_data(process_data)
 
 
-def record_objects_to_list_of_series(record_objects: list[LogFile.Record]) -> list[pd.Series]:
+def record_objects_to_list_of_series(record_objects: list[RecordArray.Record]) -> list[pd.Series]:
     data = []
     for record_object in record_objects:
-        if record_object.rec_type == LogFile.RecordType.data:
+        if record_object.rec_type == RecordArray.RecordType.data:
             data_dict = {}
             for record in record_object.data.data.records:
                 for key, value in vars(record.object).items():
