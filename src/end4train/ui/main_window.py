@@ -1,6 +1,7 @@
 from typing import Callable
 
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import QUrl, QTimer
+from PySide6.QtPositioning import QGeoCoordinate
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtWidgets import QMainWindow, QAbstractItemView
 
@@ -35,8 +36,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.traces_list_view.clicked.connect(self.request_trace_change)
 
         self.map.setSource(QUrl.fromLocalFile("ui/map.qml"))
-        print(self)
+        if self.map.errors():
+            print(self.map.errors())
         self.map.show()
+
+        # TODO: remove (just code to try a few things out...)
+        # self.map.rootObject().property("position")
+        # timer = QTimer(self)
+        # timer.timeout.connect(lambda: self.map.rootObject().setProperty("position", QGeoCoordinate(50.1, 14.5)))
+        # timer.start(5000)
 
     def toggle_listener(self):
         self.toggle_listener_callback(

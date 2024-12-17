@@ -6,8 +6,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-from geopandas import GeoDataFrame, GeoSeries, points_from_xy
-from shapely import empty, GeometryType
+from geopandas import GeoDataFrame, GeoSeries
 from yaml import safe_load
 
 from end4train.parsers.log_file import LogFile
