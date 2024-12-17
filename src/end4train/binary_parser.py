@@ -151,7 +151,9 @@ def get_data_from_process_data(process_data: Iterator[Tuple[float, PPacket.Proce
     columns = []
     for column_name, values in data.items():
         column = pd.DataFrame(values, columns=["time", column_name])
-        columns.append(column.set_index("time", drop=True))
+        column = column.set_index("time", drop=True)
+        column = column[~column.index.duplicated(keep="last")]
+        columns.append(column)
     data = pd.concat(columns, axis="columns")
     data.index = pd.to_datetime(data.index, unit="s")
     return data.sort_index()
