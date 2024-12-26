@@ -22,9 +22,9 @@ class SourceDevice(StrEnum):
     UNDEFINED = ""
 
 
-def load_device_per_object_type(path: Path) -> dict[int, str]:
+def load_device_per_object_type(ksy_file: Path) -> dict[int, str]:
     device_names = [device.value for device in SourceDevice if device.value]
-    data = safe_load(path.read_text())
+    data = safe_load(ksy_file.read_text())
     result = {}
     for key, value in data["enums"]["object_type_enum"].items():
         matches = []
@@ -38,6 +38,32 @@ def load_device_per_object_type(path: Path) -> dict[int, str]:
 
 
 SOURCE_DEVICES_PER_OBJECT_TYPE = load_device_per_object_type(RECORD_OBJECT_KSY_PATH)
+
+
+def load_object_type_enum_to_ksy_type_mapping(path: Path) -> dict[str, str]:
+    """
+    Loads mapping of e.g.:
+        pressure_current_eot: pressure_tuple
+        gps_eot: gps
+    from record_object.ksy specification
+    """
+    data = safe_load(path.read_text())
+    type_enum = {value: key for key, value in data["enums"]["object_type_enum"].items()}
+
+    record_array_attributes = {attribute["id"]: attribute for attribute in data["seq"]}
+    object_attribute = record_array_attributes["object"]
+    return {
+        type_enum[key.replace("object_type_enum::", "")]: value for key, value in
+        object_attribute["type"]["cases"].items()
+    }
+
+
+KSY_TYPE_PER_OBJECT_TYPE = load_object_type_enum_to_ksy_type_mapping(RECORD_OBJECT_KSY_PATH)
+
+
+def get_class_name_for_ksy_type(ksy_type_name: str) -> str:
+    parts = ksy_type_name.split("_")
+    return "".join([part.capitalize() for part in parts])
 
 
 def load_data_variables_per_object_type(path: Path) -> dict[int, list[str]]:
@@ -137,6 +163,7 @@ def parse_block(block: bytes | bytearray) -> pd.DataFrame:
         record_dict["size"].append(record.size)
         record_dict["type"].append(record.type)
         record_dict["timestamp"].append(record.body.timestamp if not record.incomplete else None)
+        # TODO: extract 'leftover_data' field, if 'record.incomplete'
     records = pd.DataFrame(record_dict)
     complete_records = records.loc[~records["incomplete"]]
     data_records = complete_records.loc[records["type"] == RecordArray.RecordType.data]
@@ -170,14 +197,20 @@ def load_file(path: Path) -> pd.DataFrame:
 
 
 def test_log_file_load():
-    # hot_file = Path("data") / "20240923" / "hot.dat"
-    # eot_file = Path("data") / "20240923" / "eot.dat"
-    #
-    # hot_data = load_file(hot_file)
-    # eot_data = load_file(eot_file)
+    hot_file = Path("data") / "20240923" / "hot.dat"
+    eot_file = Path("data") / "20240923" / "eot.dat"
 
-    hot_data = pd.read_parquet(Path("data") / "20240923" / "cache" / "20241029" / "hot.parquet")
-    eot_data = pd.read_parquet(Path("data") / "20240923" / "cache" / "20241029" / "eot.parquet")
+    hot_data = load_file(hot_file)
+    eot_data = load_file(eot_file)
+
+    hot_cache = Path("data") / "20240923" / "cache" / "20241029" / "hot.parquet"
+    eot_cache = Path("data") / "20240923" / "cache" / "20241029" / "eot.parquet"
+
+    # hot_data.to_parquet(hot_cache)
+    # eot_data.to_parquet(eot_cache)
+
+    hot_data = pd.read_parquet(hot_cache)
+    eot_data = pd.read_parquet(eot_cache)
 
     hot_data["loaded_from"] = "hot"
     eot_data["loaded_from"] = "eot"

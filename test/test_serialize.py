@@ -1,15 +1,24 @@
+import struct
+
+import pandas as pd
 import pytest
 
 from end4train.parsers.c_packet import CPacket
 from end4train.parsers.d_packet import DPacket
 from end4train.parsers.e_packet import EPacket
 from end4train.parsers.ffff_packet import FfffPacket
+from end4train.parsers.g_packet import GPacket
 from end4train.parsers.i_packet import IPacket
 from end4train.parsers.j_packet import JPacket
+from end4train.parsers.p_packet import PPacket
 from end4train.parsers.r_packet import RPacket
+from end4train.parsers.record_object import RecordObject
+from end4train.parsers.s_packet import SPacket
 from end4train.serializers.basic_packets import serialize_i_packet, SenderDevice, serialize_c_packet, \
     serialize_e_packet, InvalidDisplayIntensityError, serialize_d_packet, serialize_g_packet, serialize_ffff_packet, \
-    serialize_j_packet, serialize_r_packet, DataRequest
+    serialize_j_packet, serialize_r_packet, DataRequest, serialize_s_packet
+from end4train.serializers.p_packet import serialize_p_packet
+from test_log_file import load_data_variables_per_object_type, RECORD_OBJECT_KSY_PATH
 
 
 def test_i_packet():
@@ -73,6 +82,8 @@ def test_e_packet():
         serialize_e_packet(100)
     with pytest.raises(InvalidDisplayIntensityError):
         serialize_e_packet(-1)
+    with pytest.raises(struct.error):
+        serialize_e_packet(1.5)
 
 
 def test_g_packet():
@@ -86,15 +97,60 @@ def test_g_packet():
     with pytest.raises(ValueError):
         serialize_g_packet(1734288861, 1001, True)
 
+    for timestamp in range(1734288861, 1734288861 + 3600):
+        packet = serialize_g_packet(timestamp, 0, True)
+        loaded = GPacket.from_bytes(packet)
+        loaded._read()
+        assert loaded.packet_type == b"G"
+        assert loaded.timestamp == timestamp
+        assert loaded.millisecond == 0
+        assert loaded.is_gps is True
+
 
 def test_r_packet():
-    request = DataRequest(RPacket.ObjectTypeEnum.pressure_current_hot, RPacket.RequestPeriodEnum.now)
-    r = serialize_r_packet(127, [request])
+    assert serialize_r_packet(0, []) == b'R\x00\x00\x00\x00'
+    requests = [
+        DataRequest(data_type, period) for data_type in RPacket.ObjectTypeEnum for period in RPacket.RequestPeriodEnum
+    ]
+    for request_id in [0, 0xFF_FF_FF_FF, 123456]:
+        packet = serialize_r_packet(request_id, requests)
+        loaded = RPacket.from_bytes(packet)
+        loaded._read()
+        assert loaded.packet_type == b"R"
+        assert loaded.request_id == request_id
+        assert requests == [DataRequest(request.object_type, request.period) for request in loaded.requested_types]
 
 
 def test_s_packet():
-    pass
+    assert serialize_s_packet(0, SPacket.StatusEnum.available_locally) == b'S\x00\x00\x00\x00\x00'
+    assert serialize_s_packet(0, SPacket.StatusEnum.requesting_from_remote) == b'S\x00\x00\x00\x00\x01'
+
+    with pytest.raises(ValueError):
+        serialize_s_packet(0, 5)
+
+    for request_id in [0, 0xFF_FF_FF_FF, 123456]:
+        for status in SPacket.StatusEnum:
+            packet = serialize_s_packet(request_id, status)
+            loaded = SPacket.from_bytes(packet)
+            loaded._read()
+            assert loaded.packet_type == b"S"
+            assert loaded.request_id == request_id
+            assert loaded.request_status == status
 
 
 def test_p_packet():
+    second = 1734288861
+    millisecond = 287
+    timestamp = second + millisecond / 1000
+    data = pd.DataFrame(data={
+        "variable": ["pressure_a", "pressure_b"], "value": [0, 4.853],
+        "object_type": [
+            RecordObject.ObjectTypeEnum.pressure_current_hot.value,
+            RecordObject.ObjectTypeEnum.pressure_current_hot.value
+        ],
+        "timestamp": [pd.to_datetime(timestamp, unit="s"), pd.to_datetime(timestamp, unit="s")]
+    })
+    packet = serialize_p_packet(True, False, data)
+    loaded = PPacket.from_bytes(packet)
+    loaded._read()
     pass

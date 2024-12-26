@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import StrEnum
 from io import BytesIO
-from typing import Callable
+from typing import Callable, Iterable
 
 from kaitaistruct import KaitaiStream
 
@@ -13,6 +13,7 @@ from end4train.parsers.g_packet import GPacket
 from end4train.parsers.i_packet import IPacket
 from end4train.parsers.j_packet import JPacket
 from end4train.parsers.r_packet import RPacket
+from end4train.parsers.s_packet import SPacket
 from end4train.parsers.t_packet import TPacket
 
 MINIMUM_INTENSITY = 0
@@ -115,7 +116,7 @@ def serialize_j_packet(sender_id: SenderDevice) -> bytes:
     return create_bytes(packet, buffer_length=2)
 
 
-def serialize_r_packet(request_id: int, requested_data: list[DataRequest]) -> bytes:
+def serialize_r_packet(request_id: int, requested_data: Iterable[DataRequest]) -> bytes:
     if request_id < 0:
         raise ValueError(f"Request ID must not be negative. {request_id} passed.")
     packet = RPacket()
@@ -133,9 +134,14 @@ def serialize_r_packet(request_id: int, requested_data: list[DataRequest]) -> by
     return create_bytes(packet, buffer_length=5+len(packet.requested_types)*3)
 
 
-def serialize_s_packet(request_id: int, millisecond: int, is_gps: bool) -> bytes:
-    raise NotImplementedError
-
-
-def serialize_p_packet(timestamp: int, millisecond: int, is_gps: bool) -> bytes:
-    raise NotImplementedError
+def serialize_s_packet(request_id: int, status: SPacket.StatusEnum) -> bytes:
+    if request_id < 0:
+        raise ValueError(f"Request ID must not be negative. {request_id} passed.")
+    if status not in SPacket.StatusEnum:
+        raise ValueError(f"Unknown request status: {status}.")
+    packet = SPacket()
+    packet.packet_type = b'S'
+    packet.request_id = request_id
+    packet.request_status = status
+    packet._check()
+    return create_bytes(packet, buffer_length=6)

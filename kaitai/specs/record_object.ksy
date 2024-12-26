@@ -101,7 +101,7 @@ types:
         doc: Pomer napeti bandgap a reference neni ok
       - id: fault_vcc
         type: b1
-        doc: Pomer napeti reference a 3V3 neni o
+        doc: Pomer napeti reference a 3V3 neni ok
       - id: fault_24v
         type: b1
         doc: Vystupni napeti 24V neni ok

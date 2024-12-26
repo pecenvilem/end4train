@@ -1,13 +1,11 @@
 from typing import Callable
 
-from PySide6.QtCore import QUrl, QTimer
-from PySide6.QtPositioning import QGeoCoordinate
-from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import QMainWindow, QAbstractItemView
 
-from end4train.traces_model import TracesModel
+from end4train.app.traces_model import TracesModel
 from end4train.ui.main_window_ui import Ui_MainWindow
-from end4train.dataframe_model import PandasModel
+from end4train.app.dataframe_model import PandasModel
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
