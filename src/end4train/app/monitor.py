@@ -5,7 +5,7 @@ import pyqtgraph as pg
 from PySide6.QtWidgets import QApplication, QFileDialog
 from pandas.core.dtypes.common import is_numeric_dtype
 
-from end4train.app.communication import OnLineListener, LogDownloader
+from end4train.app.device_connectors import OnLineListener, LogDownloader
 from end4train.binary_parser import DataSource, get_data_from_process_data, parse_log
 from end4train.binary_parser import get_process_data_from_p_packet
 from end4train.app.traces_model import TracesModel

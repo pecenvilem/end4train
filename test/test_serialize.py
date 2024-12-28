@@ -3,28 +3,28 @@ import struct
 import pandas as pd
 import pytest
 
-from end4train.parsers.c_packet import CPacket
-from end4train.parsers.d_packet import DPacket
-from end4train.parsers.e_packet import EPacket
-from end4train.parsers.ffff_packet import FfffPacket
-from end4train.parsers.g_packet import GPacket
-from end4train.parsers.i_packet import IPacket
-from end4train.parsers.j_packet import JPacket
-from end4train.parsers.p_packet import PPacket
-from end4train.parsers.r_packet import RPacket
-from end4train.parsers.record_object import RecordObject
-from end4train.parsers.s_packet import SPacket
-from end4train.serializers.basic_packets import serialize_i_packet, SenderDevice, serialize_c_packet, \
+from end4train.communication.parsers.c_packet import CPacket
+from end4train.communication.parsers.d_packet import DPacket
+from end4train.communication.parsers.e_packet import EPacket
+from end4train.communication.parsers.ffff_packet import FfffPacket
+from end4train.communication.parsers.g_packet import GPacket
+from end4train.communication.parsers.i_packet import IPacket
+from end4train.communication.parsers.j_packet import JPacket
+from end4train.communication.parsers.p_packet import PPacket
+from end4train.communication.parsers.r_packet import RPacket
+from end4train.communication.parsers.record_object import RecordObject
+from end4train.communication.parsers.s_packet import SPacket
+from end4train.communication.serializers.basic_packets import serialize_i_packet, serialize_c_packet, \
     serialize_e_packet, InvalidDisplayIntensityError, serialize_d_packet, serialize_g_packet, serialize_ffff_packet, \
     serialize_j_packet, serialize_r_packet, DataRequest, serialize_s_packet
-from end4train.serializers.p_packet import serialize_p_packet
-from test_log_file import load_data_variables_per_object_type, RECORD_OBJECT_KSY_PATH
+from end4train.communication.ksy import Device
+from end4train.communication.serializers.p_packet import serialize_p_packet
 
 
 def test_i_packet():
-    assert serialize_i_packet(SenderDevice.MASTER) == b'IM'
+    assert serialize_i_packet(Device.MASTER) == b'IM'
 
-    for sender in SenderDevice:
+    for sender in Device:
         packet = serialize_i_packet(sender)
         loaded = IPacket.from_bytes(packet)
         loaded._read()
@@ -33,9 +33,9 @@ def test_i_packet():
 
 
 def test_j_packet():
-    assert serialize_j_packet(SenderDevice.EOT) == b'JE'
+    assert serialize_j_packet(Device.EOT) == b'JE'
 
-    for sender in SenderDevice:
+    for sender in Device:
         packet = serialize_j_packet(sender)
         loaded = JPacket.from_bytes(packet)
         loaded._read()
@@ -139,6 +139,9 @@ def test_s_packet():
 
 
 def test_p_packet():
+
+    # TODO: add more cases
+
     second = 1734288861
     millisecond = 287
     timestamp = second + millisecond / 1000

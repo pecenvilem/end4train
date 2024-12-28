@@ -3,7 +3,7 @@ import threading
 from typing import Callable
 
 from end4train.binary_parser import DataSource
-from end4train.parsers.record_object import RecordObject
+from end4train.communication.parsers.record_object import RecordObject
 
 REQUEST_ONE_TRANSMISSION = 65535
 

@@ -21,9 +21,9 @@ class RecordObject(ReadWriteKaitaiStruct):
         gps_hot = 6
         fault_eot = 7
         fault_hot = 8
-        eot_temp = 9
-        hot_temp = 10
-        brake = 11
+        temp_eot = 9
+        temp_hot = 10
+        brake_hot = 11
 
     class BrakePositionEnum(IntEnum):
         bse_apply = 0
@@ -44,7 +44,11 @@ class RecordObject(ReadWriteKaitaiStruct):
         self.object_type = KaitaiStream.resolve_enum(RecordObject.ObjectTypeEnum, self._io.read_bits_int_le(7))
         self.stop_flag = self._io.read_bits_int_le(1) != 0
         _on = self.object_type
-        if _on == RecordObject.ObjectTypeEnum.pressure_current_hot:
+        if _on == RecordObject.ObjectTypeEnum.temp_eot:
+            pass
+            self.object = RecordObject.EotPower(self._io, self, self._root)
+            self.object._read()
+        elif _on == RecordObject.ObjectTypeEnum.pressure_current_hot:
             pass
             self.object = RecordObject.PressureTuple(self._io, self, self._root)
             self.object._read()
@@ -52,21 +56,21 @@ class RecordObject(ReadWriteKaitaiStruct):
             pass
             self.object = RecordObject.PressureArray(self._io, self, self._root)
             self.object._read()
+        elif _on == RecordObject.ObjectTypeEnum.temp_hot:
+            pass
+            self.object = RecordObject.Temperature(self._io, self, self._root)
+            self.object._read()
         elif _on == RecordObject.ObjectTypeEnum.gps_eot:
             pass
             self.object = RecordObject.Gps(self._io, self, self._root)
-            self.object._read()
-        elif _on == RecordObject.ObjectTypeEnum.hot_temp:
-            pass
-            self.object = RecordObject.Temperature(self._io, self, self._root)
             self.object._read()
         elif _on == RecordObject.ObjectTypeEnum.gps_hot:
             pass
             self.object = RecordObject.Gps(self._io, self, self._root)
             self.object._read()
-        elif _on == RecordObject.ObjectTypeEnum.eot_temp:
+        elif _on == RecordObject.ObjectTypeEnum.brake_hot:
             pass
-            self.object = RecordObject.EotPower(self._io, self, self._root)
+            self.object = RecordObject.BrakeArray(self._io, self, self._root)
             self.object._read()
         elif _on == RecordObject.ObjectTypeEnum.fault_hot:
             pass
@@ -79,10 +83,6 @@ class RecordObject(ReadWriteKaitaiStruct):
         elif _on == RecordObject.ObjectTypeEnum.pressure_current_eot:
             pass
             self.object = RecordObject.PressureTuple(self._io, self, self._root)
-            self.object._read()
-        elif _on == RecordObject.ObjectTypeEnum.brake:
-            pass
-            self.object = RecordObject.BrakeArray(self._io, self, self._root)
             self.object._read()
         elif _on == RecordObject.ObjectTypeEnum.dict_version:
             pass
@@ -97,22 +97,25 @@ class RecordObject(ReadWriteKaitaiStruct):
     def _fetch_instances(self):
         pass
         _on = self.object_type
-        if _on == RecordObject.ObjectTypeEnum.pressure_current_hot:
+        if _on == RecordObject.ObjectTypeEnum.temp_eot:
+            pass
+            self.object._fetch_instances()
+        elif _on == RecordObject.ObjectTypeEnum.pressure_current_hot:
             pass
             self.object._fetch_instances()
         elif _on == RecordObject.ObjectTypeEnum.pressure_history_eot:
             pass
             self.object._fetch_instances()
-        elif _on == RecordObject.ObjectTypeEnum.gps_eot:
+        elif _on == RecordObject.ObjectTypeEnum.temp_hot:
             pass
             self.object._fetch_instances()
-        elif _on == RecordObject.ObjectTypeEnum.hot_temp:
+        elif _on == RecordObject.ObjectTypeEnum.gps_eot:
             pass
             self.object._fetch_instances()
         elif _on == RecordObject.ObjectTypeEnum.gps_hot:
             pass
             self.object._fetch_instances()
-        elif _on == RecordObject.ObjectTypeEnum.eot_temp:
+        elif _on == RecordObject.ObjectTypeEnum.brake_hot:
             pass
             self.object._fetch_instances()
         elif _on == RecordObject.ObjectTypeEnum.fault_hot:
@@ -122,9 +125,6 @@ class RecordObject(ReadWriteKaitaiStruct):
             pass
             self.object._fetch_instances()
         elif _on == RecordObject.ObjectTypeEnum.pressure_current_eot:
-            pass
-            self.object._fetch_instances()
-        elif _on == RecordObject.ObjectTypeEnum.brake:
             pass
             self.object._fetch_instances()
         elif _on == RecordObject.ObjectTypeEnum.dict_version:
@@ -140,22 +140,25 @@ class RecordObject(ReadWriteKaitaiStruct):
         self._io.write_bits_int_le(7, int(self.object_type))
         self._io.write_bits_int_le(1, int(self.stop_flag))
         _on = self.object_type
-        if _on == RecordObject.ObjectTypeEnum.pressure_current_hot:
+        if _on == RecordObject.ObjectTypeEnum.temp_eot:
+            pass
+            self.object._write__seq(self._io)
+        elif _on == RecordObject.ObjectTypeEnum.pressure_current_hot:
             pass
             self.object._write__seq(self._io)
         elif _on == RecordObject.ObjectTypeEnum.pressure_history_eot:
             pass
             self.object._write__seq(self._io)
-        elif _on == RecordObject.ObjectTypeEnum.gps_eot:
+        elif _on == RecordObject.ObjectTypeEnum.temp_hot:
             pass
             self.object._write__seq(self._io)
-        elif _on == RecordObject.ObjectTypeEnum.hot_temp:
+        elif _on == RecordObject.ObjectTypeEnum.gps_eot:
             pass
             self.object._write__seq(self._io)
         elif _on == RecordObject.ObjectTypeEnum.gps_hot:
             pass
             self.object._write__seq(self._io)
-        elif _on == RecordObject.ObjectTypeEnum.eot_temp:
+        elif _on == RecordObject.ObjectTypeEnum.brake_hot:
             pass
             self.object._write__seq(self._io)
         elif _on == RecordObject.ObjectTypeEnum.fault_hot:
@@ -165,9 +168,6 @@ class RecordObject(ReadWriteKaitaiStruct):
             pass
             self.object._write__seq(self._io)
         elif _on == RecordObject.ObjectTypeEnum.pressure_current_eot:
-            pass
-            self.object._write__seq(self._io)
-        elif _on == RecordObject.ObjectTypeEnum.brake:
             pass
             self.object._write__seq(self._io)
         elif _on == RecordObject.ObjectTypeEnum.dict_version:
@@ -181,7 +181,13 @@ class RecordObject(ReadWriteKaitaiStruct):
     def _check(self):
         pass
         _on = self.object_type
-        if _on == RecordObject.ObjectTypeEnum.pressure_current_hot:
+        if _on == RecordObject.ObjectTypeEnum.temp_eot:
+            pass
+            if self.object._root != self._root:
+                raise kaitaistruct.ConsistencyError(u"object", self.object._root, self._root)
+            if self.object._parent != self:
+                raise kaitaistruct.ConsistencyError(u"object", self.object._parent, self)
+        elif _on == RecordObject.ObjectTypeEnum.pressure_current_hot:
             pass
             if self.object._root != self._root:
                 raise kaitaistruct.ConsistencyError(u"object", self.object._root, self._root)
@@ -193,13 +199,13 @@ class RecordObject(ReadWriteKaitaiStruct):
                 raise kaitaistruct.ConsistencyError(u"object", self.object._root, self._root)
             if self.object._parent != self:
                 raise kaitaistruct.ConsistencyError(u"object", self.object._parent, self)
-        elif _on == RecordObject.ObjectTypeEnum.gps_eot:
+        elif _on == RecordObject.ObjectTypeEnum.temp_hot:
             pass
             if self.object._root != self._root:
                 raise kaitaistruct.ConsistencyError(u"object", self.object._root, self._root)
             if self.object._parent != self:
                 raise kaitaistruct.ConsistencyError(u"object", self.object._parent, self)
-        elif _on == RecordObject.ObjectTypeEnum.hot_temp:
+        elif _on == RecordObject.ObjectTypeEnum.gps_eot:
             pass
             if self.object._root != self._root:
                 raise kaitaistruct.ConsistencyError(u"object", self.object._root, self._root)
@@ -211,7 +217,7 @@ class RecordObject(ReadWriteKaitaiStruct):
                 raise kaitaistruct.ConsistencyError(u"object", self.object._root, self._root)
             if self.object._parent != self:
                 raise kaitaistruct.ConsistencyError(u"object", self.object._parent, self)
-        elif _on == RecordObject.ObjectTypeEnum.eot_temp:
+        elif _on == RecordObject.ObjectTypeEnum.brake_hot:
             pass
             if self.object._root != self._root:
                 raise kaitaistruct.ConsistencyError(u"object", self.object._root, self._root)
@@ -230,12 +236,6 @@ class RecordObject(ReadWriteKaitaiStruct):
             if self.object._parent != self:
                 raise kaitaistruct.ConsistencyError(u"object", self.object._parent, self)
         elif _on == RecordObject.ObjectTypeEnum.pressure_current_eot:
-            pass
-            if self.object._root != self._root:
-                raise kaitaistruct.ConsistencyError(u"object", self.object._root, self._root)
-            if self.object._parent != self:
-                raise kaitaistruct.ConsistencyError(u"object", self.object._parent, self)
-        elif _on == RecordObject.ObjectTypeEnum.brake:
             pass
             if self.object._root != self._root:
                 raise kaitaistruct.ConsistencyError(u"object", self.object._root, self._root)
@@ -322,6 +322,7 @@ class RecordObject(ReadWriteKaitaiStruct):
 
         @property
         def pressure_a(self):
+            """<data>."""
             if hasattr(self, '_m_pressure_a'):
                 return self._m_pressure_a
 
@@ -363,7 +364,7 @@ class RecordObject(ReadWriteKaitaiStruct):
 
         @property
         def east(self):
-            """degrees, negative -> west."""
+            """<data>; degrees, negative -> west."""
             if hasattr(self, '_m_east'):
                 return self._m_east
 
@@ -374,7 +375,7 @@ class RecordObject(ReadWriteKaitaiStruct):
             del self._m_east
         @property
         def alt(self):
-            """meters AMSL."""
+            """<data>; meters AMSL."""
             if hasattr(self, '_m_alt'):
                 return self._m_alt
 
@@ -385,7 +386,7 @@ class RecordObject(ReadWriteKaitaiStruct):
             del self._m_alt
         @property
         def north(self):
-            """degrees, negative -> south."""
+            """<data>; degrees, negative -> south."""
             if hasattr(self, '_m_north'):
                 return self._m_north
 
@@ -396,7 +397,7 @@ class RecordObject(ReadWriteKaitaiStruct):
             del self._m_north
         @property
         def azimuth(self):
-            """degrees, 409,5 -> UNKNOWN."""
+            """<data>; degrees, 409,5 -> UNKNOWN."""
             if hasattr(self, '_m_azimuth'):
                 return self._m_azimuth
 
@@ -407,7 +408,7 @@ class RecordObject(ReadWriteKaitaiStruct):
             del self._m_azimuth
         @property
         def speed(self):
-            """km/h."""
+            """<data>; km/h."""
             if hasattr(self, '_m_speed'):
                 return self._m_speed
 
@@ -441,6 +442,7 @@ class RecordObject(ReadWriteKaitaiStruct):
 
         @property
         def temp(self):
+            """<data>."""
             if hasattr(self, '_m_temp'):
                 return self._m_temp
 
@@ -589,6 +591,7 @@ class RecordObject(ReadWriteKaitaiStruct):
 
         @property
         def pressure_a(self):
+            """<data>."""
             if hasattr(self, '_m_pressure_a'):
                 return self._m_pressure_a
 
@@ -599,6 +602,7 @@ class RecordObject(ReadWriteKaitaiStruct):
             del self._m_pressure_a
         @property
         def pressure_b(self):
+            """<data>."""
             if hasattr(self, '_m_pressure_b'):
                 return self._m_pressure_b
 
@@ -659,7 +663,7 @@ class RecordObject(ReadWriteKaitaiStruct):
             del self._m_temp
         @property
         def battery_voltage(self):
-            """volts."""
+            """<data>; volts."""
             if hasattr(self, '_m_battery_voltage'):
                 return self._m_battery_voltage
 
@@ -670,7 +674,7 @@ class RecordObject(ReadWriteKaitaiStruct):
             del self._m_battery_voltage
         @property
         def balancer_burn(self):
-            """mAh."""
+            """<data>; mAh."""
             if hasattr(self, '_m_balancer_burn'):
                 return self._m_balancer_burn
 

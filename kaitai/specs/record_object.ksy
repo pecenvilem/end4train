@@ -22,15 +22,16 @@ seq:
         object_type_enum::gps_hot: gps
         object_type_enum::fault_eot: fault
         object_type_enum::fault_hot: fault
-        object_type_enum::eot_temp: eot_power
-        object_type_enum::hot_temp: temperature
-        object_type_enum::brake: brake_array
+        object_type_enum::temp_eot: eot_power
+        object_type_enum::temp_hot: temperature
+        object_type_enum::brake_hot: brake_array
 
 types:
   dictionary_version:
     seq:
     - id: version
       type: b8
+      doc: <data>
   
   pressure_tuple:
     seq:
@@ -41,8 +42,10 @@ types:
     instances:
       pressure_a:
         value: pressure_a_raw * 0.002
+        doc: <data>
       pressure_b:
         value: pressure_b_raw * 0.002
+        doc: <data>
   
   pressure_array_field:
     seq:
@@ -51,6 +54,7 @@ types:
     instances:
       pressure_a:
         value: pressure_a_raw * 0.008
+        doc: <data>
   
   pressure_array:
     seq:
@@ -58,6 +62,7 @@ types:
         type: pressure_array_field
         repeat: expr
         repeat-expr: 10
+        doc: <data>
   
   gps:
     seq:
@@ -74,68 +79,68 @@ types:
     instances:
       north:
         value: north_raw.as<s4>.as<f4> * 0.0001 / 60
-        doc: degrees, negative -> south
+        doc: <data>; degrees, negative -> south
       east:
         value: east_raw.as<s4>.as<f4> * 0.0001 / 60
-        doc: degrees, negative -> west
+        doc: <data>; degrees, negative -> west
       alt:
         value: alt_raw.as<f4> * 0.1
-        doc: meters AMSL
+        doc: <data>; meters AMSL
       speed:
         value: speed_raw.as<f4> * 0.1
-        doc: km/h
+        doc: <data>; km/h
       azimuth:
         value: azimuth_raw.as<f4> * 0.1
-        doc: degrees, 409,5 -> UNKNOWN
+        doc: <data>; degrees, 409,5 -> UNKNOWN
   
   fault:
     seq:
       - id: fault_rxmac
         type: b1
-        doc: Nelze precist MAC adresu
+        doc: <data>; Nelze precist MAC adresu
       - id: fault_nogps
         type: b1
-        doc: GPS nebyla radne inicializovana
+        doc: <data>; GPS nebyla radne inicializovana
       - id: fault_vref
         type: b1
-        doc: Pomer napeti bandgap a reference neni ok
+        doc: <data>; Pomer napeti bandgap a reference neni ok
       - id: fault_vcc
         type: b1
-        doc: Pomer napeti reference a 3V3 neni ok
+        doc: <data>; Pomer napeti reference a 3V3 neni ok
       - id: fault_24v
         type: b1
-        doc: Vystupni napeti 24V neni ok
+        doc: <data>; Vystupni napeti 24V neni ok
       - id: fault_hotprs
         type: b1
-        doc: Delsi dobu neprijimame data z HOTPRS
+        doc: <data>; Delsi dobu neprijimame data z HOTPRS
       - id: fault_accel
         type: b1
-        doc: Akcelerometr nebyl nalezen
+        doc: <data>; Akcelerometr nebyl nalezen
       - id: fault_batt
         type: b1
-        doc: Selhani baterie, nelze nabijet
+        doc: <data>; Selhani baterie, nelze nabijet
       - id: fault_dict_mismatch
         type: b1
-        doc: Verze slovniku protistrany neodpovida
+        doc: <data>; Verze slovniku protistrany neodpovida
       - id: fault_lm75
         type: b1
-        doc: Chyba cteni teploty
+        doc: <data>; Chyba cteni teploty
       - id: fault_btemp
         type: b1
-        doc: Teplota je (byla) takova ze neni mozno nabijet baterii
+        doc: <data>; Teplota je (byla) takova ze neni mozno nabijet baterii
       - type: b17
       - id: fault_flash
         type: b1
-        doc: (Interni) Doslo k chybe zapisu nebo mazani Flash
+        doc: <data>; (Interni) Doslo k chybe zapisu nebo mazani Flash
       - id: fault_logger
         type: b1
-        doc: (Interni) Logger buffer overflow - neulozilo se do Flash
+        doc: <data>; (Interni) Logger buffer overflow - neulozilo se do Flash
       - id: fault_objbuf
         type: b1
-        doc: (Interni) Delka bufferu pro obj_run je moc mala
+        doc: <data>; (Interni) Delka bufferu pro obj_run je moc mala
       - id: fault_txbuf
         type: b1
-        doc: (Interni) Zarovnani txbuf v cmx469.c je spatne
+        doc: <data>; (Interni) Zarovnani txbuf v cmx469.c je spatne
   
   eot_power:
     seq:
@@ -143,32 +148,36 @@ types:
         type: b8
       - id: soc
         type: b8
-        doc: percent (integer 0 - 127)
+        doc: <data>; percent (integer 0 - 127)
       - id: battery_voltage_raw
         type: b12
       - id: turbine_run
         type: b1
+        doc: <data>
       - id: x1_voltage_high
         type: b1
+        doc: <data>
       - id: battery_full
         type: b1
+        doc: <data>
       - id: radio_high_power
         type: b1
+        doc: <data>
       - id: balancer_burn_raw
         type: b16
       - id: turbine_run_time
         type: b16
-        doc: hour
+        doc: <data>; hour
     instances:
       temp:
         value: temp_raw.as<s1>
         doc: degrees celsius
       battery_voltage:
         value: battery_voltage_raw.as<f4> / 100
-        doc: volts
+        doc: <data>; volts
       balancer_burn:
         value: balancer_burn_raw.as<f4> * 0.45
-        doc: mAh
+        doc: <data>; mAh
   
   temperature:
     seq:
@@ -177,6 +186,7 @@ types:
     instances:
       temp:
         value: temp_raw.as<s1>
+        doc: <data>
   
   brake_array:
     seq:
@@ -185,6 +195,7 @@ types:
         enum: brake_position_enum
         repeat: expr
         repeat-expr: 10
+        doc: <data>
 
 
 enums:
@@ -198,9 +209,9 @@ enums:
     6: gps_hot
     7: fault_eot
     8: fault_hot
-    9: eot_temp
-    10: hot_temp
-    11: brake
+    9: temp_eot
+    10: temp_hot
+    11: brake_hot
   
   brake_position_enum:
     0: bse_apply

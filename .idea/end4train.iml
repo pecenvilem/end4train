@@ -9,6 +9,7 @@
       <excludeFolder url="file://$MODULE_DIR$/venv" />
       <excludeFolder url="file://$MODULE_DIR$/.idea/dictionaries" />
       <excludeFolder url="file://$MODULE_DIR$/src/end4train/tiles" />
+      <excludeFolder url="file://$MODULE_DIR$/kaitai/kaitai-struct-compiler-0.11" />
     </content>
     <orderEntry type="jdk" jdkName="Poetry (end4train)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

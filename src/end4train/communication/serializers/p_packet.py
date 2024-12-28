@@ -1,19 +1,21 @@
 import pandas as pd
 
-from end4train.parsers.p_packet import PPacket
-from end4train.parsers.process_data import ProcessData
-from end4train.parsers.record_object import RecordObject
-from end4train.serializers.basic_packets import create_bytes
-from test_log_file import load_data_variables_per_object_type, RECORD_OBJECT_KSY_PATH, \
-    load_object_type_enum_to_ksy_type_mapping, get_class_name_for_ksy_type
+from end4train.communication.parsers.p_packet import PPacket
+from end4train.communication.parsers.process_data import ProcessData
+from end4train.communication.parsers.record_object import RecordObject
+from end4train.communication.serializers.basic_packets import create_bytes
+from end4train.communication.ksy import get_class_name_for_ksy_type, DATA_VARIABLES_FOR_DATA_OBJECT_TYPE, \
+    KSY_TYPE_PER_OBJECT_TYPE
 
 
 class DictionaryVersion(RecordObject.DictionaryVersion):
-    pass
+    required_bits = 8
 
 
 # noinspection PyAttributeOutsideInit
 class PressureTuple(RecordObject.PressureTuple):
+    required_bits = 24
+
     @RecordObject.PressureTuple.pressure_a.setter
     def pressure_a(self, value: float):
         self.pressure_a_raw = int(value / 0.002)
@@ -25,6 +27,8 @@ class PressureTuple(RecordObject.PressureTuple):
 
 # noinspection PyAttributeOutsideInit
 class Gps(RecordObject.Gps):
+    required_bits = 94
+
     @RecordObject.Gps.north.setter
     def north(self, value: float):
         self.north_raw = int(value * 60 / 0.0001)
@@ -47,11 +51,13 @@ class Gps(RecordObject.Gps):
 
 
 class Fault(RecordObject.Fault):
-    pass
+    required_bits = 32
 
 
 # noinspection PyAttributeOutsideInit
 class EotPower(RecordObject.EotPower):
+    required_bits = 64
+
     @RecordObject.EotPower.temp.setter
     def temp(self, value: int):
         self.temp_raw = value
@@ -67,13 +73,23 @@ class EotPower(RecordObject.EotPower):
 
 # noinspection PyAttributeOutsideInit
 class Temperature(RecordObject.Temperature):
+    required_bits = 8
+
     @RecordObject.Temperature.temp.setter
     def temp(self, value: int):
         self.temp_raw = value
 
 
-DATA_VARIABLES_FOR_DATA_OBJECT_TYPE = load_data_variables_per_object_type(RECORD_OBJECT_KSY_PATH)
-KSY_TYPE_PER_OBJECT_TYPE = load_object_type_enum_to_ksy_type_mapping(RECORD_OBJECT_KSY_PATH)
+class BrakeArray(RecordObject.BrakeArray):
+    required_bits = 40
+
+    @property
+    def adasd(self):
+        return
+
+    @adasd.setter
+    def adasd(self, value):
+        pass
 
 
 # noinspection PyProtectedMember
@@ -106,13 +122,9 @@ def serialize_p_packet(
             setattr(record_object.object, variable, data.loc[data["variable"] == variable, "value"].iloc[0])
         record_object.object._check()
         data_object.records.append(record_object)
+
     data_object.records[-1].stop_flag = True
 
-    # TODO: create a function, that gets a DataFrame with columns: 'timestamp', 'object_type', 'variable', 'value'
-    # TODO: the function will assemble all data-objects, that can be put together from the passed values
-    # TODO: design some logic to decide, when an error should be thrown, when some object can't be assembled
-    # TODO: (e.g. some variable is missing from the DataFrame)
-    # TODO: design a validation mechanism for values of the passed DataFrame (in all columns)
     time_object.millisecond = millisecond
     time_object.eot_data = is_remote_from_eot
     time_object.eot_link_fail = False

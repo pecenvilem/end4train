@@ -8,7 +8,7 @@ from kaitaistruct import ReadWriteKaitaiStruct, KaitaiStream, BytesIO
 if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 11):
     raise Exception("Incompatible Kaitai Struct Python API: 0.11 or later is required, but you have %s" % (kaitaistruct.__version__))
 
-from end4train.parsers import record_object
+from end4train.communication.parsers import record_object
 class ProcessData(ReadWriteKaitaiStruct):
     def __init__(self, _io=None, _parent=None, _root=None):
         self._io = _io

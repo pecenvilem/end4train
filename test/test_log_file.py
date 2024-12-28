@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import zlib
-from enum import StrEnum
 from typing import Any
 
 import numpy as np
@@ -7,100 +8,31 @@ import pandas as pd
 from pathlib import Path
 
 from geopandas import GeoDataFrame, GeoSeries
+from numpy.dtypes import StringDType
 from yaml import safe_load
 
-from end4train.parsers.log_file import LogFile
-from end4train.parsers.record_array import RecordArray
-from end4train.parsers.record_object import RecordObject
-
-RECORD_OBJECT_KSY_PATH = Path("..") / "kaitai" / "specs" / "record_object.ksy"
-
-
-class SourceDevice(StrEnum):
-    HOT = "hot"
-    EOT = "eot"
-    UNDEFINED = ""
+from end4train.communication.ksy import load_kaitai_types, SOURCE_DEVICES_PER_OBJECT_TYPE, \
+    DATA_VARIABLES_FOR_DATA_OBJECT_TYPE, load_kaitai_data_objects, Device
+from end4train.communication.constants import RECORD_OBJECT_KSY_PATH, SIZE_INCREMENT
+from end4train.communication.parsers.log_file import LogFile
+from end4train.communication.parsers.record_array import RecordArray
+from end4train.communication.parsers.record_object import RecordObject
 
 
-def load_device_per_object_type(ksy_file: Path) -> dict[int, str]:
-    device_names = [device.value for device in SourceDevice if device.value]
-    data = safe_load(ksy_file.read_text())
-    result = {}
-    for key, value in data["enums"]["object_type_enum"].items():
-        matches = []
-        for name in device_names:
-            if name in value:
-                matches.append(name)
-        if len(matches) > 1:
-            raise ValueError(f"Can't select device for {value}! Matched against: {matches}")
-        result[key] = matches[0] if matches else ""
-    return result
+def test_type_loading():
+    data = safe_load(RECORD_OBJECT_KSY_PATH.read_text())
+    types = load_kaitai_types(data["types"])
+    pass
 
 
-SOURCE_DEVICES_PER_OBJECT_TYPE = load_device_per_object_type(RECORD_OBJECT_KSY_PATH)
+def test_data_object_loading():
+    data = safe_load(RECORD_OBJECT_KSY_PATH.read_text())
+    types = load_kaitai_types(data["types"])
+    cases_enum = data["seq"][2]["type"]["cases"]
+    data_objects = load_kaitai_data_objects(cases_enum, RecordObject.ObjectTypeEnum, types, Device)
+    pass
 
-
-def load_object_type_enum_to_ksy_type_mapping(path: Path) -> dict[str, str]:
-    """
-    Loads mapping of e.g.:
-        pressure_current_eot: pressure_tuple
-        gps_eot: gps
-    from record_object.ksy specification
-    """
-    data = safe_load(path.read_text())
-    type_enum = {value: key for key, value in data["enums"]["object_type_enum"].items()}
-
-    record_array_attributes = {attribute["id"]: attribute for attribute in data["seq"]}
-    object_attribute = record_array_attributes["object"]
-    return {
-        type_enum[key.replace("object_type_enum::", "")]: value for key, value in
-        object_attribute["type"]["cases"].items()
-    }
-
-
-KSY_TYPE_PER_OBJECT_TYPE = load_object_type_enum_to_ksy_type_mapping(RECORD_OBJECT_KSY_PATH)
-
-
-def get_class_name_for_ksy_type(ksy_type_name: str) -> str:
-    parts = ksy_type_name.split("_")
-    return "".join([part.capitalize() for part in parts])
-
-
-def load_data_variables_per_object_type(path: Path) -> dict[int, list[str]]:
-    data = safe_load(path.read_text())
-    type_enum = {value: key for key, value in data["enums"]["object_type_enum"].items()}
-
-    record_array_attributes = {attribute["id"]: attribute for attribute in data["seq"]}
-    object_attribute = record_array_attributes["object"]
-    object_type_mapping = {
-        type_enum[key.replace("object_type_enum::", "")]: value for key, value in
-        object_attribute["type"]["cases"].items()
-    }
-
-    attribute_mapping = {}
-    for type_name, type_details in data["types"].items():
-        if type_name not in object_type_mapping.values():
-            continue
-        attribute_names = []
-        for attribute in type_details["seq"]:
-            if "repeat" in attribute.keys():
-                continue
-            if "id" not in attribute:
-                continue
-            if "raw" in attribute["id"]:
-                continue
-            attribute_names.append(attribute['id'])
-        if "instances" in type_details:
-            for instance in type_details["instances"]:
-                attribute_names.append(instance)
-        if attribute_names:
-            attribute_mapping[type_name] = attribute_names
-
-    return {type_number: attribute_mapping[type_name] for type_number, type_name in object_type_mapping.items() if
-            type_name in attribute_mapping}
-
-
-DATA_VARIABLES_FOR_DATA_OBJECT_TYPE = load_data_variables_per_object_type(RECORD_OBJECT_KSY_PATH)
+# TODO: replace with dict[str, KaitaiType]
 
 
 def get_variable_names_for_data_object_type(data_object_type: int) -> list[str]:
@@ -153,20 +85,63 @@ def join_sector_bodies(sectors: pd.DataFrame) -> bytearray:
     return data_content
 
 
-def parse_block(block: bytes | bytearray) -> pd.DataFrame:
+def parse_block(block: bytes | bytearray, ) -> pd.DataFrame:
     record_array = RecordArray.from_bytes(block)
     record_array._read()
-    record_dict = {"body": [], "incomplete": [], "size": [], "type": [], "timestamp": []}
+    record_dict = {
+        "type": [], "size": [], "incomplete": [], "leftover_data": [],
+        "timestamp": [], "data": [], "milliseconds": [], "text": []
+    }
     for record in record_array.records:
-        record_dict["incomplete"].append(record.incomplete)
-        record_dict["body"].append(record.body if not record.incomplete else None)
-        record_dict["size"].append(record.size)
         record_dict["type"].append(record.type)
-        record_dict["timestamp"].append(record.body.timestamp if not record.incomplete else None)
-        # TODO: extract 'leftover_data' field, if 'record.incomplete'
+        record_dict["size"].append(record.size)
+        record_dict["incomplete"].append(record.incomplete)
+        if record.incomplete:
+            record_dict["leftover_data"].append(record.leftover_data)
+            record_dict["timestamp"].append(None)
+            record_dict["data"].append(None)
+            record_dict["milliseconds"].append(None)
+            record_dict["text"].append(None)
+            continue
+        record_dict["leftover_data"].append(None)
+        record_dict["timestamp"].append(record.body.timestamp)
+        if record.type == RecordArray.RecordType.data:
+            record_dict["data"].append(record.body.data)
+            record_dict["milliseconds"].append(None)
+            record_dict["text"].append(None)
+            continue
+        record_dict["data"].append(None)
+        record_dict["milliseconds"].append(record.body.milliseconds)
+        record_dict["text"].append(record.body.text)
+
     records = pd.DataFrame(record_dict)
+    arrays = {
+        int: {
+            "second": np.zeros(SIZE_INCREMENT, dtype=int), "millisecond": np.zeros(SIZE_INCREMENT, dtype=int),
+            "variable": np.empty(SIZE_INCREMENT, dtype=StringDType()), "value": np.empty(SIZE_INCREMENT, dtype=int)
+        },
+        float: {
+            "second": np.zeros(SIZE_INCREMENT, dtype=int), "millisecond": np.zeros(SIZE_INCREMENT, dtype=int),
+            "variable": np.empty(SIZE_INCREMENT, dtype=StringDType()), "value": np.empty(SIZE_INCREMENT, dtype=float)
+        },
+        bool: {
+            "second": np.zeros(SIZE_INCREMENT, dtype=int), "millisecond": np.zeros(SIZE_INCREMENT, dtype=int),
+            "variable": np.empty(SIZE_INCREMENT, dtype=StringDType()), "value": np.empty(SIZE_INCREMENT, dtype=bool)
+        },
+    }
+    indices = {int: 0, float: 0, bool: 0}
+
     complete_records = records.loc[~records["incomplete"]]
     data_records = complete_records.loc[records["type"] == RecordArray.RecordType.data]
+
+    for timestamp, data in data_records[["timestamp", "data"]].itertuples():
+        for record_object in data.records:
+            for variable_name in DATA_VARIABLES_FOR_DATA_OBJECT_TYPE[record_object.object_type]:
+                pass
+                # TODO: get all data-variables and store them in an array according to their types;
+                #  use data structure loaded via 'load_kaitai_types' function;
+                #  design rules on how to access required attributes based on the info from 'KaitaiType' dataclass
+
     data_objects = pd.DataFrame({"record_object": data_records["body"].apply(lambda body: body.data.records).explode()})
     data_objects["timestamp"] = data_records["timestamp"]
     data_objects["type"] = data_objects["record_object"].apply(lambda data_object: data_object.object_type)
@@ -254,7 +229,8 @@ def test_log_file_load():
     contradicting_epochs = unique_power_values_per_epoch[unique_power_values_per_epoch > 1]
 
     data = pd.concat(
-        [radio_power, data_object_received, hot_recorded_position, eot_received_position, eot_recorded_position], axis="columns"
+        [radio_power, data_object_received, hot_recorded_position, eot_received_position, eot_recorded_position],
+        axis="columns"
     )
     data.loc[data["radio_high_power"] == 1, "radio_power"] = "high"
     data.loc[data["radio_high_power"] == 0, "radio_power"] = "low"
@@ -269,7 +245,7 @@ def test_log_file_load():
     gdf = GeoDataFrame(data)
     gdf.index = gdf.index.strftime("%Y-%m-%d %X")
     lines = gdf.melt(value_vars=["eot_position", "hot_position"], var_name="device", value_name="position",
-             ignore_index=False).set_geometry("position").dissolve(by="timestamp").convex_hull
+                     ignore_index=False).set_geometry("position").dissolve(by="timestamp").convex_hull
     lines = lines[lines.count_coordinates() >= 2]
     lines.name = "line"
     lines = pd.merge(lines, gdf["data_object_received"], left_index=True, right_index=True)

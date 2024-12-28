@@ -9,7 +9,7 @@ from enum import IntEnum
 if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 11):
     raise Exception("Incompatible Kaitai Struct Python API: 0.11 or later is required, but you have %s" % (kaitaistruct.__version__))
 
-from end4train.parsers import process_data
+from end4train.communication.parsers import process_data
 class RecordArray(ReadWriteKaitaiStruct):
 
     class RecordType(IntEnum):

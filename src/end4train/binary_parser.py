@@ -6,11 +6,11 @@ import pandas as pd
 
 from operator import attrgetter
 
-from end4train.parsers.log_file import LogFile
-from end4train.parsers.p_packet import PPacket
-from end4train.parsers.record_object import RecordObject
-from end4train.parsers.process_data import ProcessData
-from end4train.parsers.record_array import RecordArray
+from end4train.communication.parsers.log_file import LogFile
+from end4train.communication.parsers.p_packet import PPacket
+from end4train.communication.parsers.record_object import RecordObject
+from end4train.communication.parsers.process_data import ProcessData
+from end4train.communication.parsers.record_array import RecordArray
 
 
 class DataSource(Enum):
