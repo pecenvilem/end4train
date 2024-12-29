@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import zlib
-from typing import Any
+from typing import Any, Type
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,8 @@ from numpy.dtypes import StringDType
 from yaml import safe_load
 
 from end4train.communication.ksy import load_kaitai_types, SOURCE_DEVICES_PER_OBJECT_TYPE, \
-    DATA_VARIABLES_FOR_DATA_OBJECT_TYPE, load_kaitai_data_objects, Device
+    DATA_VARIABLES_FOR_DATA_OBJECT_TYPE, load_kaitai_data_objects, Device, KSYInfoStore, KaitaiDataObject, \
+    KaitaiDataAttribute
 from end4train.communication.constants import RECORD_OBJECT_KSY_PATH, SIZE_INCREMENT
 from end4train.communication.parsers.log_file import LogFile
 from end4train.communication.parsers.record_array import RecordArray
@@ -21,18 +22,18 @@ from end4train.communication.parsers.record_object import RecordObject
 
 def test_type_loading():
     data = safe_load(RECORD_OBJECT_KSY_PATH.read_text())
-    types = load_kaitai_types(data["types"])
-    pass
+    load_kaitai_types(data["types"])
 
 
 def test_data_object_loading():
     data = safe_load(RECORD_OBJECT_KSY_PATH.read_text())
     types = load_kaitai_types(data["types"])
     cases_enum = data["seq"][2]["type"]["cases"]
-    data_objects = load_kaitai_data_objects(cases_enum, RecordObject.ObjectTypeEnum, types, Device)
-    pass
+    load_kaitai_data_objects(cases_enum, RecordObject.ObjectTypeEnum, types, Device)
 
-# TODO: replace with dict[str, KaitaiType]
+
+def test_ksy_load():
+    KSYInfoStore(RECORD_OBJECT_KSY_PATH)
 
 
 def get_variable_names_for_data_object_type(data_object_type: int) -> list[str]:
@@ -85,7 +86,7 @@ def join_sector_bodies(sectors: pd.DataFrame) -> bytearray:
     return data_content
 
 
-def parse_block(block: bytes | bytearray, ) -> pd.DataFrame:
+def parse_block(block: bytes | bytearray, data_object_map: dict[int, KaitaiDataObject]) -> list[pd.DataFrame]:
     record_array = RecordArray.from_bytes(block)
     record_array._read()
     record_dict = {
@@ -115,68 +116,121 @@ def parse_block(block: bytes | bytearray, ) -> pd.DataFrame:
         record_dict["text"].append(record.body.text)
 
     records = pd.DataFrame(record_dict)
-    arrays = {
-        int: {
-            "second": np.zeros(SIZE_INCREMENT, dtype=int), "millisecond": np.zeros(SIZE_INCREMENT, dtype=int),
-            "variable": np.empty(SIZE_INCREMENT, dtype=StringDType()), "value": np.empty(SIZE_INCREMENT, dtype=int)
-        },
-        float: {
-            "second": np.zeros(SIZE_INCREMENT, dtype=int), "millisecond": np.zeros(SIZE_INCREMENT, dtype=int),
-            "variable": np.empty(SIZE_INCREMENT, dtype=StringDType()), "value": np.empty(SIZE_INCREMENT, dtype=float)
-        },
-        bool: {
-            "second": np.zeros(SIZE_INCREMENT, dtype=int), "millisecond": np.zeros(SIZE_INCREMENT, dtype=int),
-            "variable": np.empty(SIZE_INCREMENT, dtype=StringDType()), "value": np.empty(SIZE_INCREMENT, dtype=bool)
-        },
-    }
-    indices = {int: 0, float: 0, bool: 0}
+
+    arrays = {}
+    indices = {}
+
+    def create_arrays(key: type) -> None:
+        arrays.setdefault(key, {})
+        indices.setdefault(key, 0)
+        arrays[key]["second"] = np.zeros(SIZE_INCREMENT, dtype=int)
+        arrays[key]["millisecond"] = np.zeros(SIZE_INCREMENT, dtype=int)
+        arrays[key]["data_object_type"] = np.empty(SIZE_INCREMENT, dtype=int)
+        arrays[key]["variable"] = np.empty(SIZE_INCREMENT, dtype=StringDType())
+        arrays[key]["value"] = np.empty(SIZE_INCREMENT, dtype=key)
+
+    def enlarge_arrays(key: Type) -> None:
+        arrays[key]["second"] = np.append(arrays[key]["second"], np.zeros(SIZE_INCREMENT, dtype=int))
+        arrays[key]["millisecond"] = np.append(arrays[key]["millisecond"], np.zeros(SIZE_INCREMENT, dtype=int))
+        arrays[key]["data_object_type"] = np.append(
+            arrays[key]["data_object_type"], np.empty(SIZE_INCREMENT, dtype=int)
+        )
+        arrays[key]["variable"] = np.append(arrays[key]["variable"], np.empty(SIZE_INCREMENT, dtype=StringDType()))
+        arrays[key]["value"] = np.append(arrays[key]["value"], np.empty( SIZE_INCREMENT, dtype=key))
+
+    def load_data_attributes(
+            source_object: Any, attributes: list[KaitaiDataAttribute], second: int, object_type: int,
+            arrays: dict[type, dict[str, np.typing.NDArray]], indices: dict[type, int]
+    ) -> None:
+        # TODO: get all data-variables and store them in an array according to their types;
+        #  use data structure loaded via 'load_kaitai_types' function;
+        #  design rules on how to access required attributes based on the info from 'KaitaiType' dataclass
+        for attribute in attributes:
+            if attribute.repetitions is not None:
+                continue
+                # TODO: define function to calculate inter-measurement period from on number of repetitions
+                epoch_duration = 1000  # millisecond
+                time_increment = epoch_duration / attribute.repetitions
+                first_item_millisecond = time_increment / 2
+                for index, item in enumerate(getattr(source_object, attribute.name)):
+                    millisecond = first_item_millisecond + index * time_increment
+                continue
+            if attribute.user_type is not None:
+                pass
+                continue
+            value = getattr(source_object, attribute.name)
+            value_type = type(value)
+            if value_type not in arrays:
+                create_arrays(value_type)
+
+            data_store = arrays[value_type]
+            index = indices[value_type]
+            try:
+                data_store["second"][index] = second
+                data_store["millisecond"][index] = 0
+                data_store["data_object_type"][index] = object_type
+                data_store["variable"][index] = attribute.name
+                data_store["value"][index] = value
+            except IndexError:
+                enlarge_arrays(value_type)
+            indices[value_type] += 1
 
     complete_records = records.loc[~records["incomplete"]]
     data_records = complete_records.loc[records["type"] == RecordArray.RecordType.data]
 
-    for timestamp, data in data_records[["timestamp", "data"]].itertuples():
+    for timestamp, data in data_records[["timestamp", "data"]].itertuples(index=False):
         for record_object in data.records:
-            for variable_name in DATA_VARIABLES_FOR_DATA_OBJECT_TYPE[record_object.object_type]:
-                pass
-                # TODO: get all data-variables and store them in an array according to their types;
-                #  use data structure loaded via 'load_kaitai_types' function;
-                #  design rules on how to access required attributes based on the info from 'KaitaiType' dataclass
+            data_object = data_object_map[record_object.object_type]
+            data_attributes = data_object.kaitai_type.data_attributes
+            load_data_attributes(
+                record_object.object, data_attributes, timestamp, record_object.object_type, arrays, indices
+            )
 
-    data_objects = pd.DataFrame({"record_object": data_records["body"].apply(lambda body: body.data.records).explode()})
-    data_objects["timestamp"] = data_records["timestamp"]
-    data_objects["type"] = data_objects["record_object"].apply(lambda data_object: data_object.object_type)
-    data_objects = data_objects.set_index(['type'], append=True)
-    variables_series = data_objects.apply(
-        lambda row: get_variables_via_object_type(row["record_object"]), axis="columns"
-    )
-    variables = pd.DataFrame(data=pd.json_normalize(variables_series))
-    variables.index = data_objects.index
-    devices = pd.Series(SOURCE_DEVICES_PER_OBJECT_TYPE, name="device")
-    variables = pd.melt(variables, ignore_index=False).dropna().sort_index()
-    variables = variables.merge(devices, left_on="type", right_index=True)
-    variables = variables.join(data_objects["timestamp"])
-    variables["timestamp"] = pd.to_datetime(variables["timestamp"], unit="s")
-    return variables.reset_index(drop=False, names=["process_data_object_id", "data_object_type"])
+    df = {arr_type: pd.DataFrame(data=arrays[arr_type]) for arr_type, arrs in arrays.items()}
+    for arr_type, data_frame in df.items():
+        df[arr_type] = data_frame.iloc[0:indices[arr_type]]
+
+    return list(df.values())
+
+    # data_objects = pd.DataFrame({"record_object": data_records["body"].apply(lambda body: body.data.records).explode()})
+    # data_objects["timestamp"] = data_records["timestamp"]
+    # data_objects["type"] = data_objects["record_object"].apply(lambda data_object: data_object.object_type)
+    # data_objects = data_objects.set_index(['type'], append=True)
+    # variables_series = data_objects.apply(
+    #     lambda row: get_variables_via_object_type(row["record_object"]), axis="columns"
+    # )
+    # variables = pd.DataFrame(data=pd.json_normalize(variables_series))
+    # variables.index = data_objects.index
+    # devices = pd.Series(SOURCE_DEVICES_PER_OBJECT_TYPE, name="device")
+    # variables = pd.melt(variables, ignore_index=False).dropna().sort_index()
+    # variables = variables.merge(devices, left_on="type", right_index=True)
+    # variables = variables.join(data_objects["timestamp"])
+    # variables["timestamp"] = pd.to_datetime(variables["timestamp"], unit="s")
+    # return variables.reset_index(drop=False, names=["process_data_object_id", "data_object_type"])
 
 
-def load_file(path: Path) -> pd.DataFrame:
+def load_file(path: Path, data_object_map: dict[int, KaitaiDataObject]) -> pd.DataFrame:
     log_file = LogFile.from_bytes(path.read_bytes())
     log_file._read()
 
     sectors = get_sector_dataframe(log_file)
     contiguous_sector_blocks = sectors.groupby("sequence_id").apply(join_sector_bodies)
 
-    parsed_blocks = [parse_block(block) for block in contiguous_sector_blocks]
+    parsed_blocks = []
+    for block in contiguous_sector_blocks:
+        parsed_blocks.extend(parse_block(block, data_object_map))
     data = pd.concat(parsed_blocks)
-    return data.sort_values(by=["timestamp", "device"])
+    return data.sort_values(by=["second"])
 
 
 def test_log_file_load():
     hot_file = Path("data") / "20240923" / "hot.dat"
     eot_file = Path("data") / "20240923" / "eot.dat"
 
-    hot_data = load_file(hot_file)
-    eot_data = load_file(eot_file)
+    store = KSYInfoStore(RECORD_OBJECT_KSY_PATH)
+
+    hot_data = load_file(hot_file, store.data_objects)  # 37 sec
+    eot_data = load_file(eot_file, store.data_objects)  # 2 sec
 
     hot_cache = Path("data") / "20240923" / "cache" / "20241029" / "hot.parquet"
     eot_cache = Path("data") / "20240923" / "cache" / "20241029" / "eot.parquet"

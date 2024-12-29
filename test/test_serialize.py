@@ -29,7 +29,7 @@ def test_i_packet():
         loaded = IPacket.from_bytes(packet)
         loaded._read()
         assert loaded.packet_type == b"I"
-        assert loaded.i_am == sender
+        assert loaded.i_am == sender.value.identifier
 
 
 def test_j_packet():
@@ -40,7 +40,7 @@ def test_j_packet():
         loaded = JPacket.from_bytes(packet)
         loaded._read()
         assert loaded.packet_type == b"J"
-        assert loaded.i_am == sender
+        assert loaded.i_am == sender.value.identifier
 
 
 def test_c_packet():

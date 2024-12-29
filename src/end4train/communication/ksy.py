@@ -2,13 +2,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum, Enum
+from operator import attrgetter
 from pathlib import Path
+from typing import Any, Callable, Iterable
+from collections.abc import Mapping
 
 from yaml import safe_load
 
 from end4train.communication.constants import DATA_ATTRIBUTE_LABEL, RECORD_OBJECT_KSY_PATH
 from end4train.communication.errors import KSYSpecMissingIDError, KSYSpecInvalidRepeatConditionError, \
     KSYSpecInvalidRepeatExpressionError, AmbiguousObjectTypeEnumNameError
+from end4train.communication.parsers.record_object import RecordObject
 
 
 @dataclass
@@ -29,7 +33,6 @@ class KaitaiDataAttribute:
     name: str
     user_type: None | KaitaiType
     repetitions: None | int
-    # TODO: define function to calculate inter-measurement period from on number of repetitions
 
 
 @dataclass
@@ -45,8 +48,6 @@ class KaitaiDataObject:
     enum_name: str
     source_device: Device | None
     kaitai_type: KaitaiType
-# TODO: create function, that loads mapping from the 'switch-on: object_type' statement on line 14 in
-#  'record_object.ksy'; possibly adapt 'load_object_type_enum_to_ksy_type_mapping' function
 
 
 def select_device(object_type_enum_name: str, device_enum: type(Device)) -> Device:
@@ -190,6 +191,67 @@ def load_data_variables_per_object_type(path: Path) -> dict[int, list[str]]:
             type_name in attribute_mapping}
 
 
+@dataclass
+class CollectionLookup:
+    key: str
+    lookup_value: Any
+
+    def resolve(self, parent_collection: Iterable) -> Any:
+        matches = [item for item in parent_collection if item[self.key] == self.lookup_value]
+        if len(matches) != 1:
+            raise ValueError(f"Found {len(matches)} occurrences of '{self.lookup_value}' "
+                             f"under '{self.key}' key in {parent_collection}")
+        return matches[0]
+
+
+@dataclass
+class Key:
+    key: str
+
+    def resolve(self, parent_mapping: Mapping) -> Any:
+        return parent_mapping[self.key]
+
+
+@dataclass
+class KSYElementSpecifier:
+    accessors: list[Key | CollectionLookup]
+
+
+def get_ksy_element(ksy_object: Any, specifier: KSYElementSpecifier) -> Any:
+    if not specifier.accessors:
+        return None
+    current_parent = ksy_object
+    for accessor in specifier.accessors:
+        current_parent = accessor.resolve(current_parent)
+    return current_parent
+
+
+TYPES = KSYElementSpecifier([
+    Key("types")
+])
+
+
+TYPE_SWITCH = KSYElementSpecifier([
+    Key("seq"), CollectionLookup("id", "object"), Key("type"), Key("cases")
+])
+
+
+class KSYInfoStore:
+    def __init__(self, ksy_file: Path):
+        self.ksy_file = ksy_file
+        ksy_object = safe_load(ksy_file.read_text())
+        types_element = get_ksy_element(ksy_object, TYPES)
+        self.types = load_kaitai_types(types_element)
+        type_switch_element = get_ksy_element(ksy_object, TYPE_SWITCH)
+        self.data_objects = load_kaitai_data_objects(
+            type_switch_element, RecordObject.ObjectTypeEnum, self.types, Device
+        )
+
+    # TODO: define a class with methods to load KSY file, store info and provide ways to access the info using various
+    #  keys (e.g. 'object_type_enum' value or name, python class, ...)
+
+
 SOURCE_DEVICES_PER_OBJECT_TYPE = load_device_per_object_type(RECORD_OBJECT_KSY_PATH)
 KSY_TYPE_PER_OBJECT_TYPE = load_object_type_enum_to_ksy_type_mapping(RECORD_OBJECT_KSY_PATH)
+# TODO: replace with dict[str, KaitaiType]
 DATA_VARIABLES_FOR_DATA_OBJECT_TYPE = load_data_variables_per_object_type(RECORD_OBJECT_KSY_PATH)
