@@ -247,6 +247,12 @@ class KSYInfoStore:
             type_switch_element, RecordObject.ObjectTypeEnum, self.types, Device
         )
 
+    def get_int_to_obj_type_map(self) -> dict[int, KaitaiDataObject]:
+        return self.data_objects
+
+    def get_class_to_kaitai_type_map(self) -> dict[str, KaitaiType]:
+        return {kaitai_type.python_class: kaitai_type for kaitai_type in self.types.values()}
+
     # TODO: define a class with methods to load KSY file, store info and provide ways to access the info using various
     #  keys (e.g. 'object_type_enum' value or name, python class, ...)
 
