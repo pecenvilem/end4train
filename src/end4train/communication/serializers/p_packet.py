@@ -80,7 +80,8 @@ class Temperature(RecordObject.Temperature):
         self.temp_raw = value
 
 
-class BrakeArray(RecordObject.BrakeArray):
+# TODO: fix (using dynamic parsing)
+class BrakeArray(RecordObject.BrakePositionArray):
     required_bits = 40
 
     @property
@@ -93,12 +94,13 @@ class BrakeArray(RecordObject.BrakeArray):
 
 
 # noinspection PyProtectedMember
+# TODO: rework using dynamic parsing
 def serialize_p_packet(
         is_gps_time: bool, is_remote_from_eot: bool, data: pd.DataFrame
 ) -> bytes:
     data["timestamp"] = data["timestamp"].dt.floor("s")
     if data["timestamp"].nunique() != 1:
-        raise ValueError("Not all timestamps are the same!")
+        raise ValueError("Not all timestamps are the same! They can't be sent in one P-packet")
     timestamp = data["timestamp"].iloc[0].value // 10**9
     millisecond = 0
 
@@ -111,8 +113,10 @@ def serialize_p_packet(
         subframe = subframe.set_index("variable", drop=True)
         if (subframe.groupby("variable")["value"].nunique() > 1).any():
             raise ValueError()
+        # TODO: replace import of following two dicts with using some method of KSYInfoStore
         required_variables = DATA_VARIABLES_FOR_DATA_OBJECT_TYPE[object_type]
         cls_name = get_class_name_for_ksy_type(KSY_TYPE_PER_OBJECT_TYPE[object_type])
+
         cls_to_instantiate = globals()[cls_name]
         record_object = RecordObject(_parent=data_object, _root=data_object._root)
         record_object.object_type = object_type

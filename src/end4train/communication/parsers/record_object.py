@@ -70,7 +70,7 @@ class RecordObject(ReadWriteKaitaiStruct):
             self.object._read()
         elif _on == RecordObject.ObjectTypeEnum.brake_hot:
             pass
-            self.object = RecordObject.BrakeArray(self._io, self, self._root)
+            self.object = RecordObject.BrakePositionArray(self._io, self, self._root)
             self.object._read()
         elif _on == RecordObject.ObjectTypeEnum.fault_hot:
             pass
@@ -452,39 +452,39 @@ class RecordObject(ReadWriteKaitaiStruct):
         def _invalidate_temp(self):
             del self._m_temp
 
-    class BrakeArray(ReadWriteKaitaiStruct):
+    class BrakePositionArray(ReadWriteKaitaiStruct):
         def __init__(self, _io=None, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
             self._root = _root
 
         def _read(self):
-            self.brake_record = []
+            self.brake_position = []
             for i in range(10):
-                self.brake_record.append(KaitaiStream.resolve_enum(RecordObject.BrakePositionEnum, self._io.read_bits_int_le(4)))
+                self.brake_position.append(KaitaiStream.resolve_enum(RecordObject.BrakePositionEnum, self._io.read_bits_int_le(4)))
 
 
 
         def _fetch_instances(self):
             pass
-            for i in range(len(self.brake_record)):
+            for i in range(len(self.brake_position)):
                 pass
 
 
 
         def _write__seq(self, io=None):
-            super(RecordObject.BrakeArray, self)._write__seq(io)
-            for i in range(len(self.brake_record)):
+            super(RecordObject.BrakePositionArray, self)._write__seq(io)
+            for i in range(len(self.brake_position)):
                 pass
-                self._io.write_bits_int_le(4, int(self.brake_record[i]))
+                self._io.write_bits_int_le(4, int(self.brake_position[i]))
 
 
 
         def _check(self):
             pass
-            if (len(self.brake_record) != 10):
-                raise kaitaistruct.ConsistencyError(u"brake_record", len(self.brake_record), 10)
-            for i in range(len(self.brake_record)):
+            if (len(self.brake_position) != 10):
+                raise kaitaistruct.ConsistencyError(u"brake_position", len(self.brake_position), 10)
+            for i in range(len(self.brake_position)):
                 pass
 
 

@@ -24,7 +24,7 @@ seq:
         object_type_enum::fault_hot: fault
         object_type_enum::temp_eot: eot_power
         object_type_enum::temp_hot: temperature
-        object_type_enum::brake_hot: brake_array
+        object_type_enum::brake_hot: brake_position_array
 
 types:
   dictionary_version:
@@ -188,9 +188,9 @@ types:
         value: temp_raw.as<s1>
         doc: <data>
   
-  brake_array:
+  brake_position_array:
     seq:
-      - id: brake_record
+      - id: brake_position
         type: b4
         enum: brake_position_enum
         repeat: expr

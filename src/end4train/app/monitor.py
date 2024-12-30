@@ -48,12 +48,16 @@ class Monitor:
 
     def add_data(self, data, source: DataSource):
         if source == DataSource.LOG_FILE:
+            # TODO: use dynamic parsers
             dataframe = parse_log(data)
         elif source == DataSource.P_PACKET:
+            # TODO: use dynamic parsers
             process_data = get_process_data_from_p_packet(data)
             dataframe = get_data_from_process_data(process_data)
         else:
             return
+        # TODO: design a separate function and data structure for assembling parsed data
+        # TODO: move this to a separate module
         self.data = pd.concat([self.data, dataframe])
         self.data = self.data.sort_index()
         selected_traces = self.main_window.get_selected_traces()

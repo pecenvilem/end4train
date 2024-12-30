@@ -1,3 +1,5 @@
+# TODO: replace this module using dynamic parsing
+
 import zlib
 from enum import Enum, auto, StrEnum
 from typing import Iterator, Tuple, Any
@@ -34,9 +36,9 @@ SOURCE_DEVICES = {
     RecordObject.ObjectTypeEnum.gps_hot: SourceDevice.HOT,
     RecordObject.ObjectTypeEnum.fault_eot: SourceDevice.EOT,
     RecordObject.ObjectTypeEnum.fault_hot: SourceDevice.HOT,
-    RecordObject.ObjectTypeEnum.eot_temp: SourceDevice.EOT,
-    RecordObject.ObjectTypeEnum.hot_temp: SourceDevice.HOT,
-    RecordObject.ObjectTypeEnum.brake: SourceDevice.HOT,
+    RecordObject.ObjectTypeEnum.temp_eot: SourceDevice.EOT,
+    RecordObject.ObjectTypeEnum.temp_hot: SourceDevice.HOT,
+    RecordObject.ObjectTypeEnum.brake_hot: SourceDevice.HOT,
 }
 
 DATA_EXTRACTORS = {
@@ -88,7 +90,7 @@ DATA_EXTRACTORS = {
     RecordObject.Temperature: {
         "temp": attrgetter("temp"),
     },
-    RecordObject.BrakeArray: {
+    RecordObject.BrakePositionArray: {
         "brake": lambda data_object: [record.name for record in data_object.brake_record],
     },
 }

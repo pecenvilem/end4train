@@ -120,20 +120,6 @@ def load_kaitai_data_objects(
     return data_objects
 
 
-def load_device_per_object_type(ksy_file: Path) -> dict[int, str]:
-    data = safe_load(ksy_file.read_text())
-    result = {}
-    for key, value in data["enums"]["object_type_enum"].items():
-        matches = []
-        for device in Device:
-            if value.endswith(device.value.object_type_enum_suffix):
-                matches.append(device.value.object_type_enum_suffix)
-        if len(matches) > 1:
-            raise ValueError(f"Can't select device for {value}! Matched against: {matches}")
-        result[key] = matches[0] if matches else ""
-    return result
-
-
 def load_object_type_enum_to_ksy_type_mapping(path: Path) -> dict[str, str]:
     """
     Loads mapping of e.g.:
@@ -230,7 +216,6 @@ TYPES = KSYElementSpecifier([
     Key("types")
 ])
 
-
 TYPE_SWITCH = KSYElementSpecifier([
     Key("seq"), CollectionLookup("id", "object"), Key("type"), Key("cases")
 ])
@@ -253,11 +238,10 @@ class KSYInfoStore:
     def get_class_to_kaitai_type_map(self) -> dict[str, KaitaiType]:
         return {kaitai_type.python_class: kaitai_type for kaitai_type in self.types.values()}
 
-    # TODO: define a class with methods to load KSY file, store info and provide ways to access the info using various
-    #  keys (e.g. 'object_type_enum' value or name, python class, ...)
+    # TODO: add methods returning some mapping equivalent to
+    #  'KSY_TYPE_PER_OBJECT_TYPE' and 'DATA_VARIABLES_FOR_DATA_OBJECT_TYPE'
 
 
-SOURCE_DEVICES_PER_OBJECT_TYPE = load_device_per_object_type(RECORD_OBJECT_KSY_PATH)
+# TODO: remove following two global dicts
 KSY_TYPE_PER_OBJECT_TYPE = load_object_type_enum_to_ksy_type_mapping(RECORD_OBJECT_KSY_PATH)
-# TODO: replace with dict[str, KaitaiType]
 DATA_VARIABLES_FOR_DATA_OBJECT_TYPE = load_data_variables_per_object_type(RECORD_OBJECT_KSY_PATH)
