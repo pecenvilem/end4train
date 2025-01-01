@@ -10,8 +10,6 @@ seq:
   - id: records
     type: record
     repeat: eos
-    # repeat: until
-    # repeat-until: (_io.pos + 51) >= _io.size
 
 types:
   record:

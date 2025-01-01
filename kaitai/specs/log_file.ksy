@@ -21,7 +21,6 @@ types:
   sector_header:
     seq:
       - id: timestamp
-        -orig-id: UnixTime
         type: u4
       - id: check_sum
         type: u4

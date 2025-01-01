@@ -11,6 +11,7 @@ from end4train.communication.data_store import RecordDataStore
 from end4train.communication.ksy import KaitaiType
 
 from end4train.communication.parsers.log_file import LogFile
+from end4train.communication.parsers.p_packet import PPacket
 from end4train.communication.parsers.record_array import RecordArray
 from end4train.communication.timestamp_conversion import combine_timestamp, TimestampTuple
 
@@ -86,7 +87,6 @@ def get_records(block: bytes | bytearray) -> pd.DataFrame:
     return pd.DataFrame(record_dict)
 
 
-# TODO: define a function for storing data from a DataFrame as records - for now only consider records in a P-packet
 def load_data_attributes(
         source_object: Any, class_to_kaitai_type_map: dict[str, KaitaiType], parent_object_type: int,
         second: int, data_store: RecordDataStore, millisecond: int = 0
@@ -153,6 +153,17 @@ def decode_log_file(content: bytes | bytearray, data_object_map: dict[str, Kaita
     return parse_records(all_records, data_object_map)
 
 
+def decode_p_packet(content: bytes | bytearray, data_object_map: dict[str, KaitaiType]) -> dict[Type, pd.DataFrame]:
+    packet = PPacket.from_bytes(content)
+    packet._read()
+    data_store = RecordDataStore()
+    for record_object in packet.body.records:
+        load_data_attributes(
+            record_object.object, data_object_map, record_object.object_type, packet.epoch_number, data_store
+        )
+    return data_store.get_all_data()
+
+
 def load_file(path: Path, data_object_map: dict[str, KaitaiType]) -> dict[Type, pd.DataFrame]:
     content = path.read_bytes()
     return decode_log_file(content, data_object_map)
@@ -165,3 +176,14 @@ def pivot_per_variable(molten_data: pd.DataFrame) -> pd.DataFrame:
     return pd.pivot_table(
             molten_data, values='value', index="timestamp", columns='variable', aggfunc="first"
     )
+
+
+def merge_type_specific_dataframes(dataframes: dict[Type, pd.DataFrame]) -> pd.DataFrame:
+    if not dataframes:
+        return pd.DataFrame()
+    sample_frame = list(dataframes.values())[0]
+    all_data = pd.DataFrame({column: pd.Series(dtype=dt) for column, dt in sample_frame.dtypes.to_dict().items()})
+    all_data["value"] = all_data["value"].astype(object)
+    for data_frame in dataframes.values():
+        all_data = pd.concat([all_data, data_frame])
+    return all_data

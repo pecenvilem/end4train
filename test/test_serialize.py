@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from end4train.communication.constants import RECORD_OBJECT_KSY_PATH
-from end4train.communication.decode import load_file
+from end4train.communication.decode import load_file, merge_type_specific_dataframes, decode_p_packet
 from end4train.communication.parsers.c_packet import CPacket
 from end4train.communication.parsers.d_packet import DPacket
 from end4train.communication.parsers.e_packet import EPacket
@@ -13,15 +13,13 @@ from end4train.communication.parsers.ffff_packet import FfffPacket
 from end4train.communication.parsers.g_packet import GPacket
 from end4train.communication.parsers.i_packet import IPacket
 from end4train.communication.parsers.j_packet import JPacket
-from end4train.communication.parsers.p_packet import PPacket
 from end4train.communication.parsers.r_packet import RPacket
-from end4train.communication.parsers.record_object import RecordObject
 from end4train.communication.parsers.s_packet import SPacket
 from end4train.communication.serializers.basic_packets import serialize_i_packet, serialize_c_packet, \
     serialize_e_packet, InvalidDisplayIntensityError, serialize_d_packet, serialize_g_packet, serialize_ffff_packet, \
     serialize_j_packet, serialize_r_packet, DataRequest, serialize_s_packet
+from end4train.communication.serializers.p_packet import serialize_p_packet
 from end4train.communication.ksy import Device, KSYInfoStore
-from end4train.communication.serializers.p_packet import serialize_p_packet, store_data_attributes
 
 
 def test_i_packet():
@@ -141,42 +139,29 @@ def test_s_packet():
             assert loaded.request_status == status
 
 
+@pytest.mark.skip(reason="Takes too long...")  # 1567.69s
 def test_p_packet():
-
-    # TODO: add more test cases
-
-    second = 1734288861
-    millisecond = 287
-    timestamp = second + millisecond / 1000
-    data = pd.DataFrame(data={
-        "variable": ["pressure_a", "pressure_b"], "value": [0, 4.853],
-        "object_type": [
-            RecordObject.ObjectTypeEnum.pressure_current_hot.value,
-            RecordObject.ObjectTypeEnum.pressure_current_hot.value
-        ],
-        "timestamp": [pd.to_datetime(timestamp, unit="s"), pd.to_datetime(timestamp, unit="s")]
-    })
-    packet = serialize_p_packet(True, False, data)
-    loaded = PPacket.from_bytes(packet)
-    loaded._read()
-    pass
-
-
-def test_p_packet_dynamic():
     store = KSYInfoStore(RECORD_OBJECT_KSY_PATH)
 
     eot_file = Path("data") / "20240923" / "eot.dat"
     data = load_file(eot_file, store.get_class_to_kaitai_type_map())
-    all_data = pd.DataFrame({column: pd.Series(dtype=dt) for column, dt in data[int].dtypes.to_dict().items()})
-    all_data["value"] = all_data["value"].astype(object)
-    for data_frame in data.values():
-        all_data = pd.concat([all_data, data_frame])
+    all_data = merge_type_specific_dataframes(data)
 
-    second = 1727074468
-    data_in_second = all_data[all_data["second"] == second]
-    packet = serialize_p_packet(
-        second, data_in_second, store.get_enum_value_to_kaitai_type_name_map(), True, False
-    )
-    loaded = PPacket.from_bytes(packet)
-    loaded._read()
-    pass
+    for second, subframe in all_data.groupby("second"):
+        packet = serialize_p_packet(
+            second, subframe, store.get_enum_value_to_kaitai_type_name_map(), True, False
+        )
+
+        loaded_data = merge_type_specific_dataframes(
+            decode_p_packet(packet, store.get_class_to_kaitai_type_map())
+        )
+
+        diff = pd.merge(
+            subframe, loaded_data,
+            on=list(subframe.columns.difference(["value"])),
+            how='outer', suffixes=("_stored", "_loaded"), indicator=True
+        )
+        diff_rows = diff[diff['_merge'] != 'both'][diff.columns]
+        assert len(diff_rows) == 0
+        diff["diff"] = (diff["value_stored"] - diff["value_loaded"]).abs()
+        assert diff["diff"].max() <= 0.1

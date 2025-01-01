@@ -1,8 +1,8 @@
 import socket
 import threading
+from enum import Enum, auto
 from typing import Callable
 
-from end4train.binary_parser import DataSource
 from end4train.communication.parsers.record_object import RecordObject
 
 REQUEST_ONE_TRANSMISSION = 65535
@@ -101,3 +101,8 @@ class LogDownloader:
             return
         self.downloader_socket.shutdown(socket.SHUT_RDWR)
         self.downloader_socket.close()
+
+
+class DataSource(Enum):
+    LOG_FILE = auto()
+    P_PACKET = auto()

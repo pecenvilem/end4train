@@ -120,61 +120,9 @@ def load_kaitai_data_objects(
     return data_objects
 
 
-def load_object_type_enum_to_ksy_type_mapping(path: Path) -> dict[str, str]:
-    """
-    Loads mapping of e.g.:
-        pressure_current_eot: pressure_tuple
-        gps_eot: gps
-    from record_object.ksy specification
-    """
-    data = safe_load(path.read_text())
-    type_enum = {value: key for key, value in data["enums"]["object_type_enum"].items()}
-
-    record_array_attributes = {attribute["id"]: attribute for attribute in data["seq"]}
-    object_attribute = record_array_attributes["object"]
-    return {
-        type_enum[key.replace("object_type_enum::", "")]: value for key, value in
-        object_attribute["type"]["cases"].items()
-    }
-
-
 def get_class_name_for_ksy_type(ksy_type_name: str) -> str:
     parts = ksy_type_name.split("_")
     return "".join([part.capitalize() for part in parts])
-
-
-def load_data_variables_per_object_type(path: Path) -> dict[int, list[str]]:
-    data = safe_load(path.read_text())
-    type_enum = {value: key for key, value in data["enums"]["object_type_enum"].items()}
-
-    record_array_attributes = {attribute["id"]: attribute for attribute in data["seq"]}
-    object_attribute = record_array_attributes["object"]
-    object_type_mapping = {
-        type_enum[key.replace("object_type_enum::", "")]: value for key, value in
-        object_attribute["type"]["cases"].items()
-    }
-
-    attribute_mapping = {}
-    for type_name, type_details in data["types"].items():
-        if type_name not in object_type_mapping.values():
-            continue
-        attribute_names = []
-        for attribute in type_details["seq"]:
-            if "repeat" in attribute.keys():
-                continue
-            if "id" not in attribute:
-                continue
-            if "raw" in attribute["id"]:
-                continue
-            attribute_names.append(attribute['id'])
-        if "instances" in type_details:
-            for instance in type_details["instances"]:
-                attribute_names.append(instance)
-        if attribute_names:
-            attribute_mapping[type_name] = attribute_names
-
-    return {type_number: attribute_mapping[type_name] for type_number, type_name in object_type_mapping.items() if
-            type_name in attribute_mapping}
 
 
 @dataclass
@@ -244,10 +192,3 @@ class KSYInfoStore:
             for int_enum_value, kaitai_data_object
             in self.data_objects.items()
         }
-    # TODO: add methods returning some mapping equivalent to
-    #  'KSY_TYPE_PER_OBJECT_TYPE' and 'DATA_VARIABLES_FOR_DATA_OBJECT_TYPE'
-
-
-# TODO: remove following two global dicts
-KSY_TYPE_PER_OBJECT_TYPE = load_object_type_enum_to_ksy_type_mapping(RECORD_OBJECT_KSY_PATH)
-DATA_VARIABLES_FOR_DATA_OBJECT_TYPE = load_data_variables_per_object_type(RECORD_OBJECT_KSY_PATH)

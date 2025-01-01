@@ -15,7 +15,6 @@ import end4train.communication.serializers.record_object as record_object_module
 
 
 # noinspection PyProtectedMember
-# TODO: rework using dynamic parsing
 def serialize_p_packet(
         second: int, data: pd.DataFrame,
         object_type_enum_int_value_to_kaitai_type_map: dict[int, KaitaiType],
@@ -44,7 +43,6 @@ def serialize_p_packet(
         packet.body.records[-1].stop_flag = True
     for record in packet.body.records:
         record._check()
-        # TODO: correct typing - probably a Protocol class for classes with 'required_bits' should be defined?
         buffer_length_bits += record.object.required_bits + 8
 
     packet._check()
@@ -85,8 +83,7 @@ def store_data_attributes(
     if source_data["second"].nunique() != 1:
         raise ValueError("Multiple epoch numbers present in data!")
     record_objects = []
-    # TODO: possibly set group_keys=False?
-    for object_type, subframe in source_data.groupby("data_object_type", group_keys=True):
+    for object_type, subframe in source_data.groupby("data_object_type", group_keys=False):
         subframe = subframe.set_index("variable", drop=True)
         record_object = RecordObject(_parent=parent, _root=root)
         record_object.object_type = object_type
