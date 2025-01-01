@@ -1,8 +1,11 @@
 import struct
+from pathlib import Path
 
 import pandas as pd
 import pytest
 
+from end4train.communication.constants import RECORD_OBJECT_KSY_PATH
+from end4train.communication.decode import load_file
 from end4train.communication.parsers.c_packet import CPacket
 from end4train.communication.parsers.d_packet import DPacket
 from end4train.communication.parsers.e_packet import EPacket
@@ -17,8 +20,8 @@ from end4train.communication.parsers.s_packet import SPacket
 from end4train.communication.serializers.basic_packets import serialize_i_packet, serialize_c_packet, \
     serialize_e_packet, InvalidDisplayIntensityError, serialize_d_packet, serialize_g_packet, serialize_ffff_packet, \
     serialize_j_packet, serialize_r_packet, DataRequest, serialize_s_packet
-from end4train.communication.ksy import Device
-from end4train.communication.serializers.p_packet import serialize_p_packet
+from end4train.communication.ksy import Device, KSYInfoStore
+from end4train.communication.serializers.p_packet import serialize_p_packet, store_data_attributes
 
 
 def test_i_packet():
@@ -154,6 +157,26 @@ def test_p_packet():
         "timestamp": [pd.to_datetime(timestamp, unit="s"), pd.to_datetime(timestamp, unit="s")]
     })
     packet = serialize_p_packet(True, False, data)
+    loaded = PPacket.from_bytes(packet)
+    loaded._read()
+    pass
+
+
+def test_p_packet_dynamic():
+    store = KSYInfoStore(RECORD_OBJECT_KSY_PATH)
+
+    eot_file = Path("data") / "20240923" / "eot.dat"
+    data = load_file(eot_file, store.get_class_to_kaitai_type_map())
+    all_data = pd.DataFrame({column: pd.Series(dtype=dt) for column, dt in data[int].dtypes.to_dict().items()})
+    all_data["value"] = all_data["value"].astype(object)
+    for data_frame in data.values():
+        all_data = pd.concat([all_data, data_frame])
+
+    second = 1727074468
+    data_in_second = all_data[all_data["second"] == second]
+    packet = serialize_p_packet(
+        second, data_in_second, store.get_enum_value_to_kaitai_type_name_map(), True, False
+    )
     loaded = PPacket.from_bytes(packet)
     loaded._read()
     pass

@@ -238,6 +238,12 @@ class KSYInfoStore:
     def get_class_to_kaitai_type_map(self) -> dict[str, KaitaiType]:
         return {kaitai_type.python_class: kaitai_type for kaitai_type in self.types.values()}
 
+    def get_enum_value_to_kaitai_type_name_map(self) -> dict[int, KaitaiType]:
+        return {
+            int_enum_value: kaitai_data_object.kaitai_type
+            for int_enum_value, kaitai_data_object
+            in self.data_objects.items()
+        }
     # TODO: add methods returning some mapping equivalent to
     #  'KSY_TYPE_PER_OBJECT_TYPE' and 'DATA_VARIABLES_FOR_DATA_OBJECT_TYPE'
 

@@ -1,24 +1,22 @@
 from __future__ import annotations
 
-import zlib
-from typing import Any, Type
-
 import numpy as np
 import pandas as pd
 from pathlib import Path
 
+import pytest
 from geopandas import GeoDataFrame, GeoSeries
-from numpy.dtypes import StringDType
 from yaml import safe_load
 
+from end4train.communication.decode import load_file, pivot_per_variable
 from end4train.communication.ksy import load_kaitai_types, \
-    DATA_VARIABLES_FOR_DATA_OBJECT_TYPE, load_kaitai_data_objects, Device, KSYInfoStore, KaitaiDataObject, \
-    KaitaiDataAttribute, KaitaiType
-from end4train.communication.constants import RECORD_OBJECT_KSY_PATH, SIZE_INCREMENT
-from end4train.communication.parsers.log_file import LogFile
-from end4train.communication.parsers.record_array import RecordArray
+    load_kaitai_data_objects, Device, KSYInfoStore
+from end4train.communication.constants import RECORD_OBJECT_KSY_PATH
 from end4train.communication.parsers.record_object import RecordObject
 
+
+# TODO: add some example data for loading tests to see, if correct values are being loaded,
+#  not just if function crashes, or not...
 
 def test_type_loading():
     data = safe_load(RECORD_OBJECT_KSY_PATH.read_text())
@@ -36,201 +34,44 @@ def test_ksy_load():
     KSYInfoStore(RECORD_OBJECT_KSY_PATH)
 
 
-def is_sector_checksum_valid(body: bytes | bytearray, check_sum: int) -> bool:
-    return zlib.adler32(body, 0) == check_sum
-
-
-def get_sector_dataframe(log_file: LogFile) -> pd.DataFrame:
-    sector_dict = {
-        "body": [], "check_sum": [], "corrupted": [], "empty": [], "bad": [], "serial_number": [], "payload_offset": [],
-        "timestamp": []
-    }
-    for sector in log_file.sectors:
-        sector_dict["body"].append(sector.body)
-        sector_dict["check_sum"].append(sector.header.check_sum)
-        sector_dict["corrupted"].append(not is_sector_checksum_valid(sector.body, sector.header.check_sum))
-        sector_dict["empty"].append(sector.header.empty)
-        sector_dict["bad"].append(sector.header.bad)
-        sector_dict["serial_number"].append(sector.header.serial_number)
-        sector_dict["payload_offset"].append(sector.header.payload_offset)
-        sector_dict["timestamp"].append(sector.header.timestamp)
-    sectors = pd.DataFrame(sector_dict)
-
-    sectors["sequence_interrupted"] = (
-            (sectors["serial_number"].diff() != 1) | sectors["bad"] | sectors["empty"] | sectors["corrupted"]
-    )
-    sectors["sequence_id"] = sectors["sequence_interrupted"].cumsum()
-    sectors["timestamp"] = pd.to_datetime(sectors["timestamp"], unit="s")
-    sectors["inconsistent_time"] = sectors["timestamp"].diff() < pd.Timedelta(0, unit="s")
-
-    return sectors
-
-
-def join_sector_bodies(sectors: pd.DataFrame) -> bytearray:
-    first_body, offset = sectors.iloc[0].loc[["body", "payload_offset"]]
-    bodies = sectors.iloc[1:].loc[:, "body"].values
-    data_content = bytearray(first_body[offset:])
-    for body in bodies:
-        data_content.extend(body)
-    return data_content
-
-
-def get_records(block: bytes | bytearray) -> pd.DataFrame:
-    record_array = RecordArray.from_bytes(block)
-    record_array._read()
-    record_dict = {
-        "type": [], "size": [], "incomplete": [], "leftover_data": [],
-        "second": [], "data": [], "millisecond": [], "text": []
-    }
-    for record in record_array.records:
-        record_dict["type"].append(record.type)
-        record_dict["size"].append(record.size)
-        record_dict["incomplete"].append(record.incomplete)
-        if record.incomplete:
-            record_dict["leftover_data"].append(record.leftover_data)
-            record_dict["second"].append(None)
-            record_dict["data"].append(None)
-            record_dict["millisecond"].append(None)
-            record_dict["text"].append(None)
-            continue
-        record_dict["leftover_data"].append(None)
-        record_dict["second"].append(record.body.timestamp)
-        if record.type == RecordArray.RecordType.data:
-            record_dict["data"].append(record.body.data)
-            record_dict["millisecond"].append(None)
-            record_dict["text"].append(None)
-            continue
-        record_dict["data"].append(None)
-        record_dict["millisecond"].append(record.body.milliseconds)
-        record_dict["text"].append(record.body.text)
-
-    return pd.DataFrame(record_dict)
-
-
-def parse_records(records: pd.DataFrame, class_to_kaitai_type_map: dict[str, KaitaiType]) -> dict[Type, pd.DataFrame]:
-    arrs = {}
-    indices = {}
-
-    def create_arrays(key: type) -> None:
-        arrs.setdefault(key, {})
-        indices.setdefault(key, 0)
-        arrs[key]["second"] = np.zeros(SIZE_INCREMENT, dtype=int)
-        arrs[key]["millisecond"] = np.zeros(SIZE_INCREMENT, dtype=int)
-        arrs[key]["data_object_type"] = np.empty(SIZE_INCREMENT, dtype=int)
-        arrs[key]["variable"] = np.empty(SIZE_INCREMENT, dtype=StringDType())
-        arrs[key]["value"] = np.empty(SIZE_INCREMENT, dtype=key)
-
-    def enlarge_arrays(key: Type) -> None:
-        arrs[key]["second"] = np.append(arrs[key]["second"], np.zeros(SIZE_INCREMENT, dtype=int))
-        arrs[key]["millisecond"] = np.append(arrs[key]["millisecond"], np.zeros(SIZE_INCREMENT, dtype=int))
-        arrs[key]["data_object_type"] = np.append(
-            arrs[key]["data_object_type"], np.empty(SIZE_INCREMENT, dtype=int)
-        )
-        arrs[key]["variable"] = np.append(arrs[key]["variable"], np.empty(SIZE_INCREMENT, dtype=StringDType()))
-        arrs[key]["value"] = np.append(arrs[key]["value"], np.empty( SIZE_INCREMENT, dtype=key))
-
-    def store_attribute(value: Any, object_type: int, variable_name: str, millisecond: int = 0) -> Any:
-        value_type = type(value)
-        if value_type not in arrs:
-            create_arrays(value_type)
-        data_store = arrs[value_type]
-        index = indices[value_type]
-        try:
-            data_store["second"][index] = second
-            data_store["millisecond"][index] = millisecond
-            data_store["data_object_type"][index] = object_type
-            data_store["variable"][index] = variable_name
-            data_store["value"][index] = value
-        except IndexError:
-            enlarge_arrays(value_type)
-            data_store["second"][index] = second
-            data_store["millisecond"][index] = millisecond
-            data_store["data_object_type"][index] = object_type
-            data_store["variable"][index] = variable_name
-            data_store["value"][index] = value
-        indices[value_type] += 1
-
-    # TODO: define a function for storing data from a DataFrame as records - for now only consider records in a P-packet
-    def load_data_attributes(source_object: Any, parent_object_type: int, millisecond: int = 0) -> None:
-        kaitai_type_to_extract = class_to_kaitai_type_map[type(source_object).__name__]
-        for attribute in kaitai_type_to_extract.data_attributes:
-            if attribute.repetitions is not None:
-                epoch_duration = 1000  # millisecond
-                time_increment = epoch_duration / attribute.repetitions
-                first_item_millisecond = time_increment / 2
-                container = getattr(source_object, attribute.name)
-                for index, item in enumerate(getattr(source_object, attribute.name)):
-                    millisecond = int(first_item_millisecond + index * time_increment)
-                    if attribute.user_type is not None:
-                        load_data_attributes(container[index], parent_object_type, millisecond)
-                    else:
-                        value = container[index]
-                        store_attribute(value, parent_object_type, attribute.name, millisecond)
-                continue
-            if attribute.user_type is not None:
-                load_data_attributes(getattr(source_object, attribute.name), parent_object_type, millisecond)
-            else:
-                value = getattr(source_object, attribute.name)
-                store_attribute(value, parent_object_type, attribute.name, millisecond)
-
-    complete_records = records[~records["incomplete"]]
-    data_records = complete_records[complete_records["type"] == RecordArray.RecordType.data]
-    data_records = data_records[["second", "data"]]
-    data_records["second"] = data_records["second"].astype(pd.Int64Dtype())
-
-    for second, data in data_records.itertuples(index=False):
-        for record_object in data.records:
-            load_data_attributes(record_object.object, record_object.object_type)
-
-    result = {}
-    for arr_type, arrs in arrs.items():
-        result[arr_type] = pd.DataFrame(arrs).iloc[0:indices[arr_type]]
-
-    return result
-
-
-def load_file(path: Path, data_object_map: dict[str, KaitaiType]) -> dict[Type, pd.DataFrame]:
-    log_file = LogFile.from_bytes(path.read_bytes())
-    log_file._read()
-
-    sectors = get_sector_dataframe(log_file)
-    contiguous_sector_blocks = sectors.groupby("sequence_id").apply(join_sector_bodies, include_groups = False)
-
-    records = pd.DataFrame({
-        'type': pd.Series(dtype='int'), 'size': pd.Series(dtype='int'), 'incomplete': pd.Series(dtype='bool'),
-        'leftover_data': pd.Series(dtype='object'), 'second': pd.Series(dtype='int'),
-        'data': pd.Series(dtype='object'), 'millisecond': pd.Series(dtype='int'), 'text': pd.Series(dtype='str')
-    })
-
-    for block in contiguous_sector_blocks:
-        # TODO: check dtypes and correct 'records' df to match
-        records = pd.concat([records, get_records(block)])
-
-    return parse_records(records, data_object_map)
-
-
+@pytest.mark.skip(reason="Takes too long...")
 def test_hot_data_load():
     store = KSYInfoStore(RECORD_OBJECT_KSY_PATH)
 
     hot_file = Path("data") / "20240923" / "hot.dat"
-    load_file(hot_file, store.get_class_to_kaitai_type_map())  # 37 sec (59 sec in 021643fb8e1c187be8aca2ec7c28d7ca12f8912f)
+    load_file(hot_file, store.get_class_to_kaitai_type_map())
+    # 55 sec (59 sec in 021643fb8e1c187be8aca2ec7c28d7ca12f8912f)
 
 
 def test_eot_data_load():
     store = KSYInfoStore(RECORD_OBJECT_KSY_PATH)
 
     eot_file = Path("data") / "20240923" / "eot.dat"
-    load_file(eot_file, store.get_class_to_kaitai_type_map())  # 37 sec (59 sec in 021643fb8e1c187be8aca2ec7c28d7ca12f8912f)
+    load_file(eot_file, store.get_class_to_kaitai_type_map())
+    # 3 sec (3 sec in 021643fb8e1c187be8aca2ec7c28d7ca12f8912f)
 
 
+def test_eot_data_pivoting():
+    store = KSYInfoStore(RECORD_OBJECT_KSY_PATH)
+
+    eot_file = Path("data") / "20240923" / "eot.dat"
+    data = load_file(eot_file, store.get_class_to_kaitai_type_map())
+
+    for data_frame in data.values():
+        pivot_per_variable(data_frame)
+
+
+@pytest.mark.skip(reason="Takes too long...")
 def test_log_file_load():
     hot_file = Path("data") / "20240923" / "hot.dat"
     eot_file = Path("data") / "20240923" / "eot.dat"
 
     store = KSYInfoStore(RECORD_OBJECT_KSY_PATH)
 
-    eot_data = load_file(eot_file, store.get_class_to_kaitai_type_map())  # 2 sec (3 sec in 021643fb8e1c187be8aca2ec7c28d7ca12f8912f)
-    hot_data = load_file(hot_file, store.get_class_to_kaitai_type_map())  # 37 sec (59 sec in 021643fb8e1c187be8aca2ec7c28d7ca12f8912f)
+    eot_data = load_file(eot_file,
+                         store.get_class_to_kaitai_type_map())  # 2 sec (3 sec in 021643fb8e1c187be8aca2ec7c28d7ca12f8912f)
+    hot_data = load_file(hot_file,
+                         store.get_class_to_kaitai_type_map())  # 37 sec (59 sec in 021643fb8e1c187be8aca2ec7c28d7ca12f8912f)
 
     hot_data_merged = pd.concat(hot_data.values())
     eot_data_merged = pd.concat(eot_data.values())

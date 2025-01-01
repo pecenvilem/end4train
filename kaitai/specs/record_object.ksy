@@ -128,7 +128,8 @@ types:
       - id: fault_btemp
         type: b1
         doc: <data>; Teplota je (byla) takova ze neni mozno nabijet baterii
-      - type: b17
+      - id: reserved
+        type: b17
       - id: fault_flash
         type: b1
         doc: <data>; (Interni) Doslo k chybe zapisu nebo mazani Flash
@@ -171,7 +172,7 @@ types:
     instances:
       temp:
         value: temp_raw.as<s1>
-        doc: degrees celsius
+        doc: <data>; degrees celsius
       battery_voltage:
         value: battery_voltage_raw.as<f4> / 100
         doc: <data>; volts

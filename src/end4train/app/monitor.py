@@ -9,6 +9,7 @@ from end4train.app.device_connectors import OnLineListener, LogDownloader
 from end4train.binary_parser import DataSource, get_data_from_process_data, parse_log
 from end4train.binary_parser import get_process_data_from_p_packet
 from end4train.app.traces_model import TracesModel
+from end4train.communication.decode import decode_log_file
 from end4train.ui.main_window import MainWindow
 from end4train.app.dataframe_model import PandasModel
 
@@ -48,8 +49,8 @@ class Monitor:
 
     def add_data(self, data, source: DataSource):
         if source == DataSource.LOG_FILE:
-            # TODO: use dynamic parsers
-            dataframe = parse_log(data)
+            # TODO: design a way to get info from KSYInfoStore here...
+            dataframe = decode_log_file(data, ...)
         elif source == DataSource.P_PACKET:
             # TODO: use dynamic parsers
             process_data = get_process_data_from_p_packet(data)

@@ -507,7 +507,7 @@ class RecordObject(ReadWriteKaitaiStruct):
             self.fault_dict_mismatch = self._io.read_bits_int_le(1) != 0
             self.fault_lm75 = self._io.read_bits_int_le(1) != 0
             self.fault_btemp = self._io.read_bits_int_le(1) != 0
-            self._unnamed11 = self._io.read_bits_int_le(17)
+            self.reserved = self._io.read_bits_int_le(17)
             self.fault_flash = self._io.read_bits_int_le(1) != 0
             self.fault_logger = self._io.read_bits_int_le(1) != 0
             self.fault_objbuf = self._io.read_bits_int_le(1) != 0
@@ -531,7 +531,7 @@ class RecordObject(ReadWriteKaitaiStruct):
             self._io.write_bits_int_le(1, int(self.fault_dict_mismatch))
             self._io.write_bits_int_le(1, int(self.fault_lm75))
             self._io.write_bits_int_le(1, int(self.fault_btemp))
-            self._io.write_bits_int_le(17, self._unnamed11)
+            self._io.write_bits_int_le(17, self.reserved)
             self._io.write_bits_int_le(1, int(self.fault_flash))
             self._io.write_bits_int_le(1, int(self.fault_logger))
             self._io.write_bits_int_le(1, int(self.fault_objbuf))
@@ -652,7 +652,7 @@ class RecordObject(ReadWriteKaitaiStruct):
 
         @property
         def temp(self):
-            """degrees celsius."""
+            """<data>; degrees celsius."""
             if hasattr(self, '_m_temp'):
                 return self._m_temp
 
