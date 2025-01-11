@@ -1,0 +1,1 @@
+echo Test | ncat -u localhost  3635

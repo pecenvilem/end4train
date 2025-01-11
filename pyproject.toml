@@ -10,6 +10,7 @@ python = "~3.12"
 pandas = "^2.2.2"
 pyside6 = "^6.8.0.2"
 pyqtgraph = "^0.13.7"
+anyio = "^4.8.0"
 
 
 [tool.poetry.group.test.dependencies]

@@ -1,37 +1,27 @@
-import asyncio
+import socket
+
+import anyio
 
 
-class EchoServerProtocol(asyncio.DatagramProtocol):
-    def __init__(self):
-        super().__init__()
-        self.transport: asyncio.DatagramTransport | None = None
-
-    def connection_made(self, transport):
-        print("Incoming connection")
-        self.transport = transport
-
-    def datagram_received(self, data, addr):
-        message = data.decode()
-        print('Received %r from %s' % (message, addr))
-        print('Send %r to %s' % (message, addr))
-        self.transport.sendto(data, addr)
+async def udp_server():
+    print('starting udp server')
+    async with await anyio.create_udp_socket(
+            local_host='localhost', local_port=3635) as udp:
+        async for packet, (host, port) in udp:
+            print('received: ', packet)
+            message = b'Hello, ' + packet
+            print('will send:', message)
+            await udp.sendto(message, "localhost", port)
+            print("Message sent")
 
 
-async def main() -> None:
-    print("Starting UDP server")
-
-    loop = asyncio.get_running_loop()
-
-    transport, protocol = await loop.create_datagram_endpoint(
-        EchoServerProtocol,
-        local_addr=("localhost", 3635)
-    )
-
-    try:
-        await asyncio.sleep(3600)  # Serve for 1 hour.
-    finally:
-        transport.close()
+async def main():
+    async with await anyio.create_udp_socket(
+        family=socket.AF_INET6, local_port=3635
+    ) as udp:
+        async for packet, (host, port) in udp:
+            await udp.sendto(b'Hello, ' + packet, host, port)
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    anyio.run(udp_server)
