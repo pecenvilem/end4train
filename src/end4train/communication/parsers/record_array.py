@@ -140,7 +140,11 @@ class RecordArray(ReadWriteKaitaiStruct):
 
             if (self._parent.type == RecordArray.RecordType.text):
                 pass
-                self.text = (self._io.read_bytes((self._parent.size - 6))).decode("ASCII")
+                self.text = (self._io.read_bytes((self._parent.size - 6)))
+                try:
+                    self.text = self.text.decode("ASCII")
+                except UnicodeDecodeError:
+                    pass
 
             if (self._parent.type == RecordArray.RecordType.data):
                 pass

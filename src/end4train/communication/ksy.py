@@ -192,3 +192,9 @@ class KSYInfoStore:
             for int_enum_value, kaitai_data_object
             in self.data_objects.items()
         }
+
+    def get_data_object_type_to_device_map(self) -> dict[int, str | None]:
+        return {
+            enum_value: data_object.source_device.name if data_object.source_device is not None else "UNDEFINED"
+            for enum_value, data_object in self.data_objects.items()
+        }

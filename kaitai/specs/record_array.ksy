@@ -37,9 +37,9 @@ types:
         type: u1
         if: _parent.type == record_type::text
       - id: text
-        type: str
+#        type: str
         size: _parent.size - 6
-        encoding: ASCII
+#        encoding: ASCII
         if: _parent.type == record_type::text
       - id: data
         type: process_data

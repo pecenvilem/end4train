@@ -94,6 +94,7 @@ def load_data_attributes(
     kaitai_type_to_extract = class_to_kaitai_type_map[type(source_object).__name__]
     for attribute in kaitai_type_to_extract.data_attributes:
         if attribute.repetitions is not None:
+            previous_second = second - 1
             time_increment = EPOCH_DURATION / attribute.repetitions
             first_item_millisecond = time_increment / 2
             container = getattr(source_object, attribute.name)
@@ -101,10 +102,10 @@ def load_data_attributes(
                 millisecond = int(first_item_millisecond + index * time_increment)
                 if attribute.user_type is not None:
                     load_data_attributes(
-                        item, class_to_kaitai_type_map, parent_object_type, second, data_store, millisecond
+                        item, class_to_kaitai_type_map, parent_object_type, previous_second, data_store, millisecond
                     )
                 else:
-                    data_store.store_value(item, parent_object_type, attribute.name, second, millisecond)
+                    data_store.store_value(item, parent_object_type, attribute.name, previous_second, millisecond)
         else:
             if attribute.user_type is not None:
                 load_data_attributes(
