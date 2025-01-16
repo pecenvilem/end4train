@@ -143,7 +143,7 @@ def decode_log_file(content: bytes | bytearray, data_object_map: dict[str, Kaita
     all_records = pd.DataFrame({
         'type': pd.Series(dtype='int'), 'size': pd.Series(dtype='int'), 'incomplete': pd.Series(dtype='bool'),
         'leftover_data': pd.Series(dtype='object'), 'second': pd.Series(dtype='int'),
-        'data': pd.Series(dtype='object'), 'millisecond': pd.Series(dtype='int'), 'text': pd.Series(dtype='str')
+        'data': pd.Series(dtype='object'), 'millisecond': pd.Series(dtype='int'), 'text': pd.Series(dtype='bytes')
     })
 
     for block in contiguous_sector_blocks:

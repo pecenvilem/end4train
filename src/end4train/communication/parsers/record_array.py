@@ -140,11 +140,7 @@ class RecordArray(ReadWriteKaitaiStruct):
 
             if (self._parent.type == RecordArray.RecordType.text):
                 pass
-                self.text = (self._io.read_bytes((self._parent.size - 6)))
-                try:
-                    self.text = self.text.decode("ASCII")
-                except UnicodeDecodeError:
-                    pass
+                self.text = self._io.read_bytes((self._parent.size - 6))
 
             if (self._parent.type == RecordArray.RecordType.data):
                 pass
@@ -178,7 +174,7 @@ class RecordArray(ReadWriteKaitaiStruct):
 
             if (self._parent.type == RecordArray.RecordType.text):
                 pass
-                self._io.write_bytes((self.text).encode(u"ASCII"))
+                self._io.write_bytes(self.text)
 
             if (self._parent.type == RecordArray.RecordType.data):
                 pass
@@ -203,8 +199,8 @@ class RecordArray(ReadWriteKaitaiStruct):
 
             if (self._parent.type == RecordArray.RecordType.text):
                 pass
-                if (len((self.text).encode(u"ASCII")) != (self._parent.size - 6)):
-                    raise kaitaistruct.ConsistencyError(u"text", len((self.text).encode(u"ASCII")), (self._parent.size - 6))
+                if (len(self.text) != (self._parent.size - 6)):
+                    raise kaitaistruct.ConsistencyError(u"text", len(self.text), (self._parent.size - 6))
 
             if (self._parent.type == RecordArray.RecordType.data):
                 pass

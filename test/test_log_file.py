@@ -69,25 +69,25 @@ def test_log_file_load():
 
     store = KSYInfoStore(RECORD_OBJECT_KSY_PATH)
 
-    eot_data = load_file(eot_file,
-                         store.get_class_to_kaitai_type_map())  # 2 sec (3 sec in 021643fb8e1c187be8aca2ec7c28d7ca12f8912f)
-    hot_data = load_file(hot_file,
-                         store.get_class_to_kaitai_type_map())  # 37 sec (59 sec in 021643fb8e1c187be8aca2ec7c28d7ca12f8912f)
+    # eot_data = load_file(eot_file,
+    #                      store.get_class_to_kaitai_type_map())  # 2 sec (3 sec in 021643fb8e1c187be8aca2ec7c28d7ca12f8912f)
+    # hot_data = load_file(hot_file,
+    #                      store.get_class_to_kaitai_type_map())  # 37 sec (59 sec in 021643fb8e1c187be8aca2ec7c28d7ca12f8912f)
+    #
+    # hot_data_merged = merge_type_specific_dataframes(hot_data)
+    # eot_data_merged = merge_type_specific_dataframes(eot_data)
 
-    hot_data_merged = merge_type_specific_dataframes(hot_data)
-    eot_data_merged = merge_type_specific_dataframes(eot_data)
+    # hot_data_merged["loaded_from"] = "HOT"
+    # eot_data_merged["loaded_from"] = "EOT"
 
     hot_cache = Path("data") / "20241219" / "cache" / "20250113" / "hot.parquet"
     eot_cache = Path("data") / "20241219" / "cache" / "20250113" / "eot.parquet"
 
-    hot_data_merged["loaded_from"] = "HOT"
-    eot_data_merged["loaded_from"] = "EOT"
+    # hot_data_merged.to_parquet(hot_cache)
+    # eot_data_merged.to_parquet(eot_cache)
 
-    hot_data_merged.to_parquet(hot_cache)
-    eot_data_merged.to_parquet(eot_cache)
-
-    # hot_data_merged = pd.read_parquet(hot_cache)
-    # eot_data_merged = pd.read_parquet(eot_cache)
+    hot_data_merged = pd.read_parquet(hot_cache)
+    eot_data_merged = pd.read_parquet(eot_cache)
 
     data = pd.concat([hot_data_merged, eot_data_merged])
     data["device"] = data["data_object_type"].replace(store.get_data_object_type_to_device_map())
@@ -97,6 +97,15 @@ def test_log_file_load():
         .sort_values(["timestamp", "loaded_from", "data_object_type", "variable"], ignore_index=True)
     )
     data["data_object_received"] = (data["loaded_from"] == "HOT") & (data["device"] == "EOT")
+
+    # TODO: remove - used for data export
+    d = data[
+        data["variable"].isin(["pressure_a", "pressure_b", "brake_position"]) & (data["loaded_from"] == data["device"])]
+    pivot = pd.pivot(d, values="value", columns=["variable", "data_object_type"])
+    pivot = pivot.set_index(d["timestamp"])
+    pivot = pivot.groupby("timestamp").first().ffill()
+    pivot = pivot.loc['2024-12-19']
+    pivot.to_excel("20241219_velim.xlsx")
 
     data = pd.concat([data, data.pivot(columns="variable", values="value")], axis="columns")
     data = data.drop(["variable", "value"], axis="columns")
