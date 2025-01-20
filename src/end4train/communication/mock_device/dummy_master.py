@@ -1,11 +1,16 @@
 import asyncio
 
-from anyio import create_connected_udp_socket, fail_after
+from anyio import fail_after, create_udp_socket
+
+from end4train.communication.constants import PORT
+from end4train.communication.ksy import Device
+from end4train.communication.serializers.basic_packets import serialize_i_packet
 
 
 async def main():
-    async with await create_connected_udp_socket(remote_host='localhost', remote_port=3635) as udp:
-        await udp.send(b'Test')
+    async with await create_udp_socket(local_host="127.0.0.1") as udp:
+        packet = serialize_i_packet(Device.MASTER)
+        await udp.sendto(packet, "127.255.255.255", PORT)
 
         expecting_data = True
         while expecting_data:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+PORT = 3635
 MINIMUM_INTENSITY = 0
 MAXIMUM_INTENSITY = 15
 DATA_ATTRIBUTE_LABEL = "<data>"

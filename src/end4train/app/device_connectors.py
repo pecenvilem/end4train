@@ -3,6 +3,7 @@ import threading
 from enum import Enum, auto
 from typing import Callable
 
+from end4train.communication.constants import PORT
 from end4train.communication.parsers.record_object import RecordObject
 
 REQUEST_ONE_TRANSMISSION = 65535
@@ -16,12 +17,12 @@ def request_object(host: str, object_type: RecordObject.ObjectTypeEnum, period: 
             (0).to_bytes(length=4, byteorder="little"),
             object_type.value.to_bytes(length=1, byteorder="little"),
             period.to_bytes(length=2, byteorder="little"),
-        ]), (host, 3635)
+        ]), (host, PORT)
     )
 
 
 class OnLineListener:
-    def __init__(self, receive_data_handler, host='0.0.0.0', port=3635):
+    def __init__(self, receive_data_handler, host='0.0.0.0', port=PORT):
         self.host = host
         self.port = port
         self.receive_data_handler = receive_data_handler
@@ -65,7 +66,7 @@ class OnLineListener:
 
 
 class LogDownloader:
-    def __init__(self, receive_data_handler: Callable, host: str, port=3635):
+    def __init__(self, receive_data_handler: Callable, host: str, port=PORT):
         self.host = host
         self.port = port
         self.receive_data_handler = receive_data_handler
