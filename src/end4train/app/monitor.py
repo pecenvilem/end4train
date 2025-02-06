@@ -7,7 +7,7 @@ from pandas.core.dtypes.common import is_numeric_dtype
 
 from end4train.app.device_connectors import OnLineListener, LogDownloader, DataSource
 from end4train.app.traces_model import TracesModel
-from end4train.communication.constants import RECORD_OBJECT_KSY_PATH
+from end4train.config.paths import RECORD_OBJECT_KSY_PATH
 from end4train.communication.decode import decode_log_file, merge_type_specific_dataframes, decode_p_packet
 from end4train.communication.ksy import KSYInfoStore
 from end4train.ui.main_window import MainWindow
@@ -55,7 +55,7 @@ class Monitor:
             loaded_data = decode_p_packet(data, self.ksy_info_store.get_class_to_kaitai_type_map())
         else:
             return
-        dataframe = merge_type_specific_dataframes(loaded_data)
+        dataframe = merge_type_specific_dataframes(list(loaded_data.values()))
         self.data = pd.concat([self.data, dataframe])
         self.data = self.data.sort_index()
         # TODO: if possible, don't sort repeatedly

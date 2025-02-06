@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from end4train.communication.constants import RECORD_OBJECT_KSY_PATH
+from end4train.config.paths import RECORD_OBJECT_KSY_PATH
 from end4train.communication.decode import load_file, merge_type_specific_dataframes, decode_p_packet
 from end4train.communication.parsers.c_packet import CPacket
 from end4train.communication.parsers.d_packet import DPacket
@@ -139,22 +139,23 @@ def test_s_packet():
             assert loaded.request_status == status
 
 
-@pytest.mark.skip(reason="Takes too long...")  # 1567.69s
+# @pytest.mark.skip(reason="Takes too long...")  # 1567.69s
 def test_p_packet():
     store = KSYInfoStore(RECORD_OBJECT_KSY_PATH)
 
-    eot_file = Path("data") / "20240923" / "eot.dat"
+    eot_file = Path("data") / "20241219" / "eot.dat"
+    hot_file = Path("data") / "20241219" / "hot.dat"
     data = load_file(eot_file, store.get_class_to_kaitai_type_map())
-    all_data = merge_type_specific_dataframes(data)
+    all_data = merge_type_specific_dataframes(list(data.values()))
 
     for second, subframe in all_data.groupby("second"):
         packet = serialize_p_packet(
             second, subframe, store.get_enum_value_to_kaitai_type_name_map(), True, False
         )
 
-        loaded_data = merge_type_specific_dataframes(
-            decode_p_packet(packet, store.get_class_to_kaitai_type_map())
-        )
+        loaded_data = merge_type_specific_dataframes(list(
+            decode_p_packet(packet, store.get_class_to_kaitai_type_map()).values()
+        ))
 
         diff = pd.merge(
             subframe, loaded_data,

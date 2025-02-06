@@ -3,7 +3,7 @@ import threading
 from enum import Enum, auto
 from typing import Callable
 
-from end4train.communication.constants import PORT
+from end4train.config.communication import PORT
 from end4train.communication.parsers.record_object import RecordObject
 
 REQUEST_ONE_TRANSMISSION = 65535

@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum, Enum
-from operator import attrgetter
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any, Iterable
 from collections.abc import Mapping
 
 from yaml import safe_load
 
-from end4train.communication.constants import DATA_ATTRIBUTE_LABEL, RECORD_OBJECT_KSY_PATH
+from end4train.config.communication import DATA_ATTRIBUTE_LABEL
 from end4train.communication.errors import KSYSpecMissingIDError, KSYSpecInvalidRepeatConditionError, \
     KSYSpecInvalidRepeatExpressionError, AmbiguousObjectTypeEnumNameError
 from end4train.communication.parsers.record_object import RecordObject

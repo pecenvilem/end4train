@@ -8,10 +8,10 @@ import pytest
 from geopandas import GeoDataFrame, GeoSeries
 from yaml import safe_load
 
-from end4train.communication.decode import load_file, pivot_per_variable, merge_type_specific_dataframes
+from end4train.communication.decode import load_file, pivot_per_variable
 from end4train.communication.ksy import load_kaitai_types, \
     load_kaitai_data_objects, Device, KSYInfoStore
-from end4train.communication.constants import RECORD_OBJECT_KSY_PATH
+from end4train.config.paths import RECORD_OBJECT_KSY_PATH
 from end4train.communication.parsers.record_object import RecordObject
 from end4train.communication.timestamp_conversion import combine_timestamp, TimestampTuple
 

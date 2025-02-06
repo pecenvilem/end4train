@@ -3,6 +3,10 @@
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
+*.env*
+!.env.logging_dir
+*.log
+poetry.lock
 /venv/
 /build/
 /dist/

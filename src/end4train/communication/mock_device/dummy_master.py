@@ -2,7 +2,7 @@ import asyncio
 
 from anyio import fail_after, create_udp_socket
 
-from end4train.communication.constants import PORT
+from end4train.config.communication import PORT
 from end4train.communication.ksy import Device
 from end4train.communication.serializers.basic_packets import serialize_i_packet
 

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from numpy.dtypes import StringDType
 
-from end4train.communication.constants import SIZE_INCREMENT
+from end4train.config.communication import SIZE_INCREMENT
 
 
 class RecordDataStore:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from end4train.communication.constants import MINIMUM_INTENSITY, MAXIMUM_INTENSITY, DATA_ATTRIBUTE_LABEL
+from end4train.config.communication import MINIMUM_INTENSITY, MAXIMUM_INTENSITY, DATA_ATTRIBUTE_LABEL
 
 
 # TODO: replace used ValueErrors with custom Exceptions

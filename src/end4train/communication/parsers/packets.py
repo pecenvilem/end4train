@@ -8,17 +8,17 @@ from kaitaistruct import ReadWriteKaitaiStruct, KaitaiStream, BytesIO
 if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 11):
     raise Exception("Incompatible Kaitai Struct Python API: 0.11 or later is required, but you have %s" % (kaitaistruct.__version__))
 
-from end4train.communication.parsers import ffff_packet
-from end4train.communication.parsers import j_packet
-from end4train.communication.parsers import t_packet
-from end4train.communication.parsers import g_packet
 from end4train.communication.parsers import d_packet
 from end4train.communication.parsers import r_packet
-from end4train.communication.parsers import i_packet
+from end4train.communication.parsers import g_packet
+from end4train.communication.parsers import ffff_packet
 from end4train.communication.parsers import e_packet
+from end4train.communication.parsers import t_packet
+from end4train.communication.parsers import j_packet
+from end4train.communication.parsers import i_packet
 from end4train.communication.parsers import s_packet
-from end4train.communication.parsers import p_packet
 from end4train.communication.parsers import c_packet
+from end4train.communication.parsers import p_packet
 class Packets(ReadWriteKaitaiStruct):
     def __init__(self, _io=None, _parent=None, _root=None):
         self._io = _io

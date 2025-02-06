@@ -28,6 +28,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.table.setModel(data_table_model)
 
         self.plot.setBackground("white")
+        # TODO: replace PyQtGraph with pglive https://github.com/domarm-comat/pglive/tree/main
 
         self.record_box.stateChanged.connect(self.toggle_listener)
         self.load_btn.clicked.connect(self.request_download)

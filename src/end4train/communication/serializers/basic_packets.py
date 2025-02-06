@@ -4,7 +4,7 @@ from typing import Callable, Iterable
 
 from kaitaistruct import KaitaiStream
 
-from end4train.communication.constants import MINIMUM_INTENSITY, MAXIMUM_INTENSITY
+from end4train.config.communication import MINIMUM_INTENSITY, MAXIMUM_INTENSITY
 from end4train.communication.ksy import Device
 from end4train.communication.errors import InvalidDisplayIntensityError
 from end4train.communication.parsers.c_packet import CPacket
@@ -19,7 +19,7 @@ from end4train.communication.parsers.s_packet import SPacket
 from end4train.communication.parsers.t_packet import TPacket
 
 
-@dataclass
+@dataclass(frozen=True)
 class DataRequest:
     data_type: RPacket.ObjectTypeEnum
     period: int | RPacket.RequestPeriodEnum

@@ -1,4 +1,12 @@
 # END4TRAIN project
+## Development
+To correctly set up everything for development, all environmental variables in
+`end4train.config.app.EnvVariable` enum should be defined.  
+For paths, use absolute paths pointing to the corresponding locations
+in your local filesystem.  
+(TODO: write install scripts in bash and PowerShell to set up developement environment automatically)
+
+
 ## Head of Train
 ### Head PC (HPC) software
 Code is separated into two folders:

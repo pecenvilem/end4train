@@ -5,7 +5,7 @@ from typing import Any
 
 import pandas as pd
 
-from end4train.communication.constants import EPOCH_DURATION
+from end4train.config.communication import EPOCH_DURATION
 from end4train.communication.ksy import KaitaiType
 from end4train.communication.parsers.p_packet import PPacket
 from end4train.communication.parsers.process_data import ProcessData

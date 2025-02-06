@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import zlib
 from pathlib import Path
-from typing import Type, Any
+from typing import Type, Any, Sequence
 
 import pandas as pd
 
-from end4train.communication.constants import EPOCH_DURATION
+from end4train.config.communication import EPOCH_DURATION
 from end4train.communication.data_store import RecordDataStore
 from end4train.communication.ksy import KaitaiType
 
@@ -179,12 +179,12 @@ def pivot_per_variable(molten_data: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def merge_type_specific_dataframes(dataframes: dict[Type, pd.DataFrame]) -> pd.DataFrame:
+def merge_type_specific_dataframes(dataframes: Sequence[pd.DataFrame]) -> pd.DataFrame:
     if not dataframes:
         return pd.DataFrame()
-    sample_frame = list(dataframes.values())[0]
+    sample_frame = dataframes[0]
     all_data = pd.DataFrame({column: pd.Series(dtype=dt) for column, dt in sample_frame.dtypes.to_dict().items()})
     all_data["value"] = all_data["value"].astype(object)
-    for data_frame in dataframes.values():
+    for data_frame in dataframes:
         all_data = pd.concat([all_data, data_frame])
     return all_data
