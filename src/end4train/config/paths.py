@@ -17,8 +17,6 @@ CONFIG_FOLDER = PATHS_FILE.parent
 KAITAI_SPEC_FOLDER = CONFIG_FOLDER / "kaitai_specs"
 RECORD_OBJECT_KSY_PATH = KAITAI_SPEC_FOLDER / "record_object.ksy"
 
-# TODO: design a way to select an appropriate location for logs
-#  possibly try to load an ENV variable? if nothing is defined use platform-specific location
 LOGS_FOLDER = Path(
     os.environ.get(
         EnvVariable.LOG_FILE_DIR,

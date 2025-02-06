@@ -8,11 +8,13 @@ import datetime
 from pathlib import Path
 from typing import Callable, Any, Coroutine
 
+import anyio
 import pandas as pd
 from anyio import create_udp_socket, sleep, create_task_group
-from anyio.abc import UDPSocket
+from anyio.abc import UDPSocket, SocketAttribute
 
 from end4train.config.communication import PORT
+from end4train.config.logging import LOGGING_CONFIG_DICT
 from end4train.config.paths import RECORD_OBJECT_KSY_PATH
 from end4train.communication.decode import merge_type_specific_dataframes
 from end4train.communication.ksy import Device, KSYInfoStore
@@ -32,7 +34,7 @@ HOT_SAMPLE_PARQUET_FOLDER = SAMPLE_DATA_PARQUET_FOLDER / "hot"
 EOT_SAMPLE_PARQUET_FOLDER = SAMPLE_DATA_PARQUET_FOLDER / "eot"
 
 module_logger = logging.getLogger(__name__)
-# logging.config.dictConfig(config)
+logging.config.dictConfig(LOGGING_CONFIG_DICT)
 
 @dataclass(frozen=True)
 class KnownHost:
@@ -80,6 +82,9 @@ class TimsDevice(ABC):
     def add_startup_task(self, task: Coroutine[Any, Any, Any]) -> None:
         self._tasks_to_start.append(task)
 
+    def get_log_header(self) -> str:
+        return f"{self.device_type.name} at '{self.local_host}:{self.local_port}'"
+
     def add_known_host(self, remote_host: str, remote_port: int, remote_device_type: str) -> None:
         # TODO: represent remote device using Device
         self.known_hosts[remote_device_type].add(KnownHost(remote_host, remote_port))
@@ -102,12 +107,14 @@ class TimsDevice(ABC):
                 decoded_packet._read()
                 handler = self.handlers.get(decoded_packet.packet_type)
                 if handler is None:
-                    print(f"No handler for packet type: {decoded_packet.packet_type}")
+                    module_logger.info(
+                        f"{self.get_log_header()}: Packet type: {decoded_packet.packet_type}: No handler"
+                    )
                     continue
                 response = handler(decoded_packet, host, port)
                 if response is not None:
+                    await anyio.wait_writable(self.socket.extra(SocketAttribute.raw_socket))
                     await self.socket.sendto(response, host, port)
-            # TODO: add RPacket handling
 
     async def run(self) -> None:
         if self.socket is None:
@@ -181,7 +188,9 @@ class DataAcquisitionDevice(TimsDevice):
             int(time.time()), data_to_send, ksy_info_store.get_enum_value_to_kaitai_type_name_map(),
             False, False
         )
-        print(f"Sending data...")
+        module_logger.debug(
+            f"{self.get_log_header()}: Sending to '{remote_host.remote_host}:{remote_host.remote_port}': Packet: {"P"}"
+        )
         await self.socket.sendto(response, remote_host.remote_host, remote_host.remote_port)
 
     def handle_r_packet(self, packet: Packets, source_host: str, source_port: int) -> bytes | None:
@@ -193,32 +202,12 @@ class DataAcquisitionDevice(TimsDevice):
                 requested_type.object_type, requested_type.period
             )
         self._requested_data[remote_host] = remote_hosts_requests
-        # TODO: remove print
-        print(
-            f"{self.device_type.name} on '{self.local_host}': "
-            f"Added request for remote host: {remote_host}"
+        module_logger.info(
+            f"{self.get_log_header()}: R-Packet from: '{remote_host.remote_host}:{remote_host.remote_port}': "
+            f"Added requests: "
+            f"{", ".join(f"{request.object_type}@{request.period}" for request in r_packet.requested_types)}"
         )
         return serialize_s_packet(r_packet.request_id, SPacket.StatusEnum.available_locally)
-
-    def handle_p_packet(self, packet: Packets, source_host: str, source_port: int) -> bytes | None:
-        print(
-            f"{self.device_type.name} on '{self.local_host}': "
-            f"Received P-packet from '{source_host}:{source_port}' "
-            f"with {len(packet.body.body.records)} records."
-        )
-        return None
-
-    def handle_s_packet(self, packet: Packets, source_host: str, source_port: int) -> bytes | None:
-        # TODO: add logic to retry an r-packet request if no acknowledge is received by some time
-        # TODO: remove print
-        s_packet: SPacket = packet.body
-        print(
-            f"{self.device_type.name} on '{self.local_host}': "
-            f"Request id: {s_packet.request_id} acknowledged by "
-            f"'{source_host}:{source_port}' with status: {s_packet.request_status.name}"
-        )
-        return None
-
 
 class HoT(DataAcquisitionDevice):
     def __init__(self, ksy_info_store: KSYInfoStore, sample_data_folder: Path, local_host: str, local_port: int = PORT):
@@ -250,11 +239,14 @@ class Master(TimsDevice):
         self._scanning_period = period
 
     async def read_remote_data_object(self) -> None:
-        await sleep(1)
+        await anyio.wait_writable(self.socket.extra(SocketAttribute.raw_socket))
         await self.socket.sendto(
             serialize_r_packet(
                 0,
-                [DataRequest(RPacket.ObjectTypeEnum.dict_version, 3)]
+                [
+                    DataRequest(RPacket.ObjectTypeEnum.pressure_current_hot, 1),
+                    DataRequest(RPacket.ObjectTypeEnum.dict_version, 10),
+                ]
             ),
             TEST_HOT_HOST, PORT
         )
@@ -264,38 +256,19 @@ class Master(TimsDevice):
             await self.socket.sendto(self.get_identification_request(), "127.255.255.255", PORT)
             await sleep(self._scanning_period)
 
-    def handle_r_packet(self, packet: Packets, source_host: str, source_port: int) -> bytes | None:
-        r_packet: RPacket = packet.body
-        remote_host = KnownHost(source_host, source_port)
-        remote_hosts_requests = self._requested_data.get(remote_host, {})
-        for requested_type in r_packet.requested_types:
-            remote_hosts_requests[requested_type.object_type] = DataRequest(
-                requested_type.object_type, requested_type.period
-            )
-        self._requested_data[remote_host] = remote_hosts_requests
-        # TODO: remove print
-        print(
-            f"{self.device_type.name} on '{self.local_host}': "
-            f"Added request for remote host: {remote_host}"
-        )
-        return serialize_s_packet(r_packet.request_id, SPacket.StatusEnum.available_locally)
-
     def handle_p_packet(self, packet: Packets, source_host: str, source_port: int) -> bytes | None:
-        print(
-            f"{self.device_type.name} on '{self.local_host}': "
-            f"Received P-packet from '{source_host}:{source_port}' "
-            f"with {len(packet.body.body.records)} records."
+        module_logger.info(
+            f"{self.get_log_header()}: P-packet from: '{source_host}:{source_port}': "
+            f"Record types: {", ".join(str(record.object_type) for record in packet.body.body.records)}."
         )
         return None
 
     def handle_s_packet(self, packet: Packets, source_host: str, source_port: int) -> bytes | None:
         # TODO: add logic to retry an r-packet request if no acknowledge is received by some time
-        # TODO: remove print
         s_packet: SPacket = packet.body
-        print(
-            f"{self.device_type.name} on '{self.local_host}': "
-            f"Request id: {s_packet.request_id} acknowledged by "
-            f"'{source_host}:{source_port}' with status: {s_packet.request_status.name}"
+        module_logger.info(
+            f"{self.get_log_header()}': S-Packet from: {source_host}:{source_port}: Acknowledged id: "
+            f"{s_packet.request_id}: Status: {s_packet.request_status.name}"
         )
         return None
 
@@ -321,4 +294,4 @@ if __name__ == '__main__':
     # TODO: add KeyboardInterrupt handlers into e.g. serve() to enable graceful shutdown
     #   possibly already handled by AnyIO? Add print statement that catches e.g. serve function teardown
     except KeyboardInterrupt:
-        print("Stopped by user")
+        module_logger.info("App: Stopped by user")
