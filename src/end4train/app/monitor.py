@@ -8,10 +8,21 @@ from pandas.core.dtypes.common import is_numeric_dtype
 from end4train.app.device_connectors import OnLineListener, LogDownloader, DataSource
 from end4train.app.traces_model import TracesModel
 from end4train.config.paths import RECORD_OBJECT_KSY_PATH
-from end4train.communication.decode import decode_log_file, merge_type_specific_dataframes, decode_p_packet
+from end4train.communication.decode import decode_log_file, merge_type_specific_dataframes, decode_p_packet, \
+    pivot_per_variable
 from end4train.communication.ksy import KSYInfoStore
 from end4train.ui.main_window import MainWindow
 from end4train.app.dataframe_model import PandasModel
+
+# TODO: rework using AnyIO
+
+# TODO: add map
+
+# TODO: remove table
+
+# TODO: use pglive
+
+# TODO: add analog gauges (possible implement a simple one from scratch...)
 
 
 class Monitor:
@@ -56,6 +67,7 @@ class Monitor:
         else:
             return
         dataframe = merge_type_specific_dataframes(list(loaded_data.values()))
+        dataframe = pivot_per_variable(dataframe)
         self.data = pd.concat([self.data, dataframe])
         self.data = self.data.sort_index()
         # TODO: if possible, don't sort repeatedly

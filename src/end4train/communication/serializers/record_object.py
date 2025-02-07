@@ -84,5 +84,5 @@ class Temperature(RecordObject.Temperature):
         self.temp_raw = value
 
 
-class BrakeArray(RecordObject.BrakePositionArray):
+class BrakePositionArray(RecordObject.BrakePositionArray):
     required_bits = 40

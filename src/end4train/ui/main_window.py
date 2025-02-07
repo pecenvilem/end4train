@@ -4,6 +4,7 @@ from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import QMainWindow, QAbstractItemView
 
 from end4train.app.traces_model import TracesModel
+from end4train.communication.mock_device.device import TEST_HOT_HOST, TEST_EOT_HOST
 from end4train.ui.main_window_ui import Ui_MainWindow
 from end4train.app.dataframe_model import PandasModel
 
@@ -53,8 +54,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def get_selected_host(self) -> str:
         if self.hot_btn.isChecked():
-            return "hot"
-        return "eot"
+            return TEST_HOT_HOST
+        return TEST_EOT_HOST
 
     def request_download(self):
         self.request_download_callback(self.get_selected_host())

@@ -80,7 +80,7 @@ def store_data_attributes(
         data_object_type_value_to_kaitai_type_map: dict[int, KaitaiType],
         parent: Any, root: Any
 ) -> list[RecordObject]:
-    if source_data["second"].nunique() != 1:
+    if source_data["second"].nunique() > 1:
         raise ValueError("Multiple epoch numbers present in data!")
     record_objects = []
     for object_type, subframe in source_data.groupby("data_object_type", group_keys=False):

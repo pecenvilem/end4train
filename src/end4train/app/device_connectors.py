@@ -3,6 +3,8 @@ import threading
 from enum import Enum, auto
 from typing import Callable
 
+from end4train.communication.parsers.r_packet import RPacket
+from end4train.communication.serializers.basic_packets import serialize_r_packet, DataRequest
 from end4train.config.communication import PORT
 from end4train.communication.parsers.record_object import RecordObject
 
@@ -10,15 +12,23 @@ REQUEST_ONE_TRANSMISSION = 65535
 
 
 def request_object(host: str, object_type: RecordObject.ObjectTypeEnum, period: int = 0):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.sendto(
-        b"".join([
-            b"R",
-            (0).to_bytes(length=4, byteorder="little"),
-            object_type.value.to_bytes(length=1, byteorder="little"),
-            period.to_bytes(length=2, byteorder="little"),
-        ]), (host, PORT)
+    request_objects(host, [object_type], period)
+    # sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, )
+    # sock.bind(("0.0.0.0", PORT))
+    # packet = serialize_r_packet(
+    #             0,
+    #             [DataRequest(object_type, period),]
+    # )
+    # sock.sendto(packet, (host, PORT))
+
+def request_objects(host: str, objects: list[RecordObject.ObjectTypeEnum], period: int = 0):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, )
+    sock.bind(("127.0.0.1", PORT))
+    packet = serialize_r_packet(
+        0,
+        [DataRequest(object_type, period) for object_type in objects]
     )
+    sock.sendto(packet, (host, PORT))
 
 
 class OnLineListener:
@@ -38,14 +48,14 @@ class OnLineListener:
         self._thread = threading.Thread(target=self._listen_loop)
         self._thread.start()
 
-        for object_type in RecordObject.ObjectTypeEnum:
-            request_object(host, object_type, 1)
+        request_objects(host, [object_type for object_type in RecordObject.ObjectTypeEnum], 1)
 
     def stop(self, host: str):
         if not self.listening:
             return
-        for object_type in RecordObject.ObjectTypeEnum:
-            request_object(host, object_type, 0)
+        request_objects(host, [object_type for object_type in RecordObject.ObjectTypeEnum], 0)
+        # for object_type in RecordObject.ObjectTypeEnum:
+        #     request_object(host, object_type, 0)
         self.listener_socket.shutdown(socket.SHUT_RDWR)
         self.listener_socket.close()
         # make a dummy connection to the listening socket - this causes the .recv to return and throw exception
