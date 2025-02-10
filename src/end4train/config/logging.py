@@ -18,9 +18,6 @@ LOGGING_CONFIG = {
     },
     "loggers": {
         "__main__": {"level": "DEBUG", "handlers": ["file", "console"]},
-        "log_dra.pipeline.convert": {"level": "DEBUG", "handlers": ["file", "console"]},
-        "log_dra.pipeline.merge": {"level": "DEBUG", "handlers": ["file", "console"]},
-        "log_dra.pipeline.analyse": {"level": "DEBUG", "handlers": ["file", "console"]},
-        "log_dra.pipeline.performance": {"level": "DEBUG", "handlers": ["file", "console"]},
+        "end4train.communication.mock_device.device": {"level": "DEBUG", "handlers": ["file", "console"]},
     },
 }

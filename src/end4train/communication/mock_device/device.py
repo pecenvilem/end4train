@@ -128,7 +128,7 @@ class TimsDevice(ABC):
                 # noinspection PyTypeChecker
                 self._task_group.start_soon(task)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         self._task_group.cancel_scope.cancel()
 
     def handle_i_packet(self, packet: Packets, source_host: str, source_port: int) -> bytes | None:
@@ -298,9 +298,11 @@ async def main() -> None:
 
     async with create_task_group() as tg:
         # noinspection PyTypeChecker
-        tg.start_soon(master.run)
+        # tg.start_soon(master.run)
+
         # noinspection PyTypeChecker
         tg.start_soon(hot.run)
+
         # noinspection PyTypeChecker
         # tg.start_soon(eot.run)
 

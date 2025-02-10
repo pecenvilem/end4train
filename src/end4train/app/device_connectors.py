@@ -1,8 +1,10 @@
+import asyncio
 import socket
 import threading
 from enum import Enum, auto
 from typing import Callable
 
+from end4train.communication.mock_device.device import Master
 from end4train.communication.parsers.r_packet import RPacket
 from end4train.communication.serializers.basic_packets import serialize_r_packet, DataRequest
 from end4train.config.communication import PORT
@@ -35,24 +37,31 @@ class OnLineListener:
     def __init__(self, receive_data_handler, host='0.0.0.0', port=PORT):
         self.host = host
         self.port = port
+        self.device = asyncio.run(self.init_device())
         self.receive_data_handler = receive_data_handler
         self.listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._thread = threading.Thread(target=self._listen_loop)
+        self._thread = threading.Thread(target=self.run_device_loop)
+        # self._thread = threading.Thread(target=self._listen_loop)
         self.listening = False
+
+    async def init_device(self) -> Master:
+        return Master(self.host, self.port)
 
     def listen(self, host: str):
         if self.listening:
             return
         self.listening = True
         self.listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._thread = threading.Thread(target=self._listen_loop)
+        # self._thread = threading.Thread(target=self._listen_loop)
+        self._thread = threading.Thread(target=self.run_device_loop)
         self._thread.start()
 
         request_objects(host, [object_type for object_type in RecordObject.ObjectTypeEnum], 1)
 
-    def stop(self, host: str):
-        if not self.listening:
-            return
+    def run_device_loop(self) -> None:
+        asyncio.run(self.device.run())
+
+    def shutdown(self, host: str) -> None:
         request_objects(host, [object_type for object_type in RecordObject.ObjectTypeEnum], 0)
         # for object_type in RecordObject.ObjectTypeEnum:
         #     request_object(host, object_type, 0)
@@ -60,6 +69,12 @@ class OnLineListener:
         self.listener_socket.close()
         # make a dummy connection to the listening socket - this causes the .recv to return and throw exception
         socket.socket(socket.AF_INET, socket.SOCK_DGRAM).connect(("localhost", self.port))
+
+    def stop(self, host: str):
+        if not self.listening:
+            return
+        # self.shutdown(host)
+        asyncio.run(self.device.stop())
 
     def _listen_loop(self):
         self.listener_socket.bind((self.host, self.port))
