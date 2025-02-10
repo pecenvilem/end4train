@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+BROADCAST_ADDRESS = "127.255.255.255"
 PORT = 3635
 MINIMUM_INTENSITY = 0
 MAXIMUM_INTENSITY = 15
@@ -7,4 +8,4 @@ DATA_ATTRIBUTE_LABEL = "<data>"
 SIZE_INCREMENT = 100_000
 EPOCH_DURATION = 1000  # millisecond
 
-SERVE_DELAY = 0.9  # s
+SERVE_DELAY = 0.1  # s

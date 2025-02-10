@@ -2,10 +2,13 @@
 
 
 a = Analysis(
-    ['src\\end4train\\main.py'],
+    ['src\\end4train\\app\\main.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[
+    ('src\\end4train\\config\\kaitai_specs\\', 'end4train\\config\\kaitai_specs\\'),
+    ('src\\end4train\\config\\sample_data\\', 'end4train\\config\\sample_data\\'),
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

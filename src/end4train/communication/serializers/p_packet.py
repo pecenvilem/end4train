@@ -15,25 +15,21 @@ import end4train.communication.serializers.record_object as record_object_module
 
 
 # noinspection PyProtectedMember
-def serialize_p_packet(
+def assemble_p_packet(
         second: int, data: pd.DataFrame,
         object_type_enum_int_value_to_kaitai_type_map: dict[int, KaitaiType],
         is_gps_time: bool, is_remote_from_eot: bool
-) -> bytes:
-    millisecond = 0
-    buffer_length_bits = 8 + 32 + 16
-
+) -> PPacket:
     packet = PPacket()
     packet.packet_type = b'P'
     packet.epoch_number = second
     packet.time = PPacket.EpochTime(_parent=packet, _root=packet._root)
-    packet.time.millisecond = millisecond
+    packet.time.millisecond = 0
     packet.time.eot_data = is_remote_from_eot
     packet.time.eot_link_fail = False
     packet.time.remote_eot_no_gps_time = False
     packet.time.local_no_gps_time = not is_gps_time
     packet.time._check()
-
     packet.body = ProcessData(_parent=packet, _root=packet._root)
     packet.body.records = store_data_attributes(
         data, object_type_enum_int_value_to_kaitai_type_map,
@@ -43,14 +39,19 @@ def serialize_p_packet(
         packet.body.records[-1].stop_flag = True
     for record in packet.body.records:
         record._check()
-        buffer_length_bits += record.object.required_bits + 8
-
     packet._check()
+    return packet
+
+
+# noinspection PyProtectedMember
+def serialize_p_packet(packet: PPacket) -> bytes:
+    buffer_length_bits = 8 + 32 + 16
+    for record in packet.body.records:
+        buffer_length_bits += record.object.required_bits + 8
     return create_bytes(packet, buffer_length=ceil(buffer_length_bits / 8))
 
 
 def assemble_kaitai_type(source_data: pd.DataFrame, kaitai_type: KaitaiType, parent: Any, root: Any) -> Any:
-    # record_object = globals()[kaitai_type.python_class](_parent=parent, _root=root)
     record_object = getattr(record_object_module, kaitai_type.python_class)(_parent=parent, _root=root)
     for attribute in kaitai_type.data_attributes:
         if attribute.repetitions is not None:

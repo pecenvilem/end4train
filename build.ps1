@@ -1,1 +1,1 @@
-pyinstaller src\end4train\app\main.py -F -n TimsMonitor -w
+poetry run pyinstaller TimsMonitor.spec

@@ -27,6 +27,17 @@ class Device(Enum):
     DISPLAY = DeviceDescription("display", "D")
 
 
+class UnknownDeviceIdentifierError(Exception):
+    pass
+
+
+def get_device_for_identifier(identifier: str) -> Device:
+    for device in Device:
+        if device.value.identifier == identifier:
+            return device
+    raise UnknownDeviceIdentifierError(f"Can't find Device for identifier: {identifier}")
+
+
 @dataclass
 class KaitaiDataAttribute:
     name: str

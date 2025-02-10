@@ -1,7 +1,7 @@
 from end4train.config.app import APP_NAME
 from end4train.config.paths import LOGS_FOLDER
 
-LOGGING_CONFIG_DICT = {
+LOGGING_CONFIG = {
     "version": 1,
     "formatters": {
         "standard": {""

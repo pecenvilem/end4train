@@ -22,7 +22,7 @@ from end4train.app.dataframe_model import PandasModel
 
 # TODO: use pglive
 
-# TODO: add analog gauges (possible implement a simple one from scratch...)
+# TODO: add analog gauges (possibly implement a simple one from scratch...)
 
 
 class Monitor:

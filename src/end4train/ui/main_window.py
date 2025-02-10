@@ -4,7 +4,7 @@ from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import QMainWindow, QAbstractItemView
 
 from end4train.app.traces_model import TracesModel
-from end4train.communication.mock_device.device import TEST_HOT_HOST, TEST_EOT_HOST
+from end4train.config.dummy_device import TEST_HOT_HOST, TEST_EOT_HOST
 from end4train.ui.main_window_ui import Ui_MainWindow
 from end4train.app.dataframe_model import PandasModel
 
