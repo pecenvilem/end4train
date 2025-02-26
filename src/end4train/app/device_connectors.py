@@ -1,6 +1,7 @@
 import asyncio
 import socket
 import threading
+from asyncio import AbstractEventLoop
 from enum import Enum, auto
 from typing import Callable
 
@@ -15,13 +16,7 @@ REQUEST_ONE_TRANSMISSION = 65535
 
 def request_object(host: str, object_type: RecordObject.ObjectTypeEnum, period: int = 0):
     request_objects(host, [object_type], period)
-    # sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, )
-    # sock.bind(("0.0.0.0", PORT))
-    # packet = serialize_r_packet(
-    #             0,
-    #             [DataRequest(object_type, period),]
-    # )
-    # sock.sendto(packet, (host, PORT))
+
 
 def request_objects(host: str, objects: list[RecordObject.ObjectTypeEnum], period: int = 0):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, )
@@ -37,57 +32,46 @@ class OnLineListener:
     def __init__(self, receive_data_handler, host='0.0.0.0', port=PORT):
         self.host = host
         self.port = port
-        self.device = asyncio.run(self.init_device())
+        self._device: Master | None = None
+        self._loop: AbstractEventLoop | None = None
         self.receive_data_handler = receive_data_handler
-        self.listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._thread = threading.Thread(target=self.run_device_loop)
-        # self._thread = threading.Thread(target=self._listen_loop)
+        self._thread: threading.Thread | None = None
         self.listening = False
-
-    async def init_device(self) -> Master:
-        return Master(self.host, self.port)
 
     def listen(self, host: str):
         if self.listening:
             return
         self.listening = True
-        self.listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # self._thread = threading.Thread(target=self._listen_loop)
+        # TODO: move request list to some config...
+        requests = [
+            DataRequest(RPacket.ObjectTypeEnum.pressure_current_hot, 1),
+            DataRequest(RPacket.ObjectTypeEnum.pressure_current_eot, 1),
+            DataRequest(RPacket.ObjectTypeEnum.gps_hot, 1),
+            DataRequest(RPacket.ObjectTypeEnum.gps_eot, 1),
+            DataRequest(RPacket.ObjectTypeEnum.brake, 1),
+        ]
+        self._device = Master(self.host, self.port, requests)
+        self._device.register_data_handler(self.receive_data_handler)
         self._thread = threading.Thread(target=self.run_device_loop)
         self._thread.start()
 
-        request_objects(host, [object_type for object_type in RecordObject.ObjectTypeEnum], 1)
-
     def run_device_loop(self) -> None:
-        asyncio.run(self.device.run())
+        if self._device is None:
+            return
+        self._loop = asyncio.new_event_loop()
+        self._loop.run_until_complete(self._device.run())
 
     def shutdown(self, host: str) -> None:
-        request_objects(host, [object_type for object_type in RecordObject.ObjectTypeEnum], 0)
-        # for object_type in RecordObject.ObjectTypeEnum:
-        #     request_object(host, object_type, 0)
-        self.listener_socket.shutdown(socket.SHUT_RDWR)
-        self.listener_socket.close()
-        # make a dummy connection to the listening socket - this causes the .recv to return and throw exception
-        socket.socket(socket.AF_INET, socket.SOCK_DGRAM).connect(("localhost", self.port))
+        if self._device is None:
+            return
+        asyncio.run_coroutine_threadsafe(self._device.stop(), self._loop)
+        self._thread.join()
 
     def stop(self, host: str):
         if not self.listening:
             return
-        # self.shutdown(host)
-        asyncio.run(self.device.stop())
-
-    def _listen_loop(self):
-        self.listener_socket.bind((self.host, self.port))
-        while True:
-            try:
-                data = self.listener_socket.recv(1024)
-                if data[0] != ord("P"):
-                    continue
-                self.receive_data_handler(data, DataSource.P_PACKET)
-            except (OSError, BrokenPipeError):
-                # connection was closed
-                self.listening = False
-                return
+        self.shutdown(host)
+        self.listening = False
 
 
 class LogDownloader:

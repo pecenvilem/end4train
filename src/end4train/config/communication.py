@@ -8,4 +8,4 @@ DATA_ATTRIBUTE_LABEL = "<data>"
 SIZE_INCREMENT = 100_000
 EPOCH_DURATION = 1000  # millisecond
 
-SERVE_DELAY = 0.1  # s
+SERVE_DELAY = 0.1  # second

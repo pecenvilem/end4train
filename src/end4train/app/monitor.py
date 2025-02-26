@@ -1,3 +1,4 @@
+from functools import partial
 from typing import List
 
 import pandas as pd
@@ -9,7 +10,7 @@ from end4train.app.device_connectors import OnLineListener, LogDownloader, DataS
 from end4train.app.traces_model import TracesModel
 from end4train.config.paths import RECORD_OBJECT_KSY_PATH
 from end4train.communication.decode import decode_log_file, merge_type_specific_dataframes, decode_p_packet, \
-    pivot_per_variable
+    pivot_per_variable, parse_p_packet
 from end4train.communication.ksy import KSYInfoStore
 from end4train.ui.main_window import MainWindow
 from end4train.app.dataframe_model import PandasModel
@@ -38,7 +39,7 @@ class Monitor:
         self.plot_traces = {}
 
         self.ksy_info_store = KSYInfoStore(RECORD_OBJECT_KSY_PATH)
-        self.listener = OnLineListener(self.add_data)
+        self.listener = OnLineListener(partial(self.add_data, source=DataSource.P_PACKET))
         self.downloader = LogDownloader(self.add_data, "hot")
 
         self._app.aboutToQuit.connect(self.shutdown)
@@ -65,11 +66,13 @@ class Monitor:
         if source == DataSource.LOG_FILE:
             loaded_data = decode_log_file(data, self.ksy_info_store.get_class_to_kaitai_type_map())
         elif source == DataSource.P_PACKET:
-            loaded_data = decode_p_packet(data, self.ksy_info_store.get_class_to_kaitai_type_map())
+            loaded_data = parse_p_packet(data, self.ksy_info_store.get_class_to_kaitai_type_map())
         else:
             return
-        dataframe = merge_type_specific_dataframes(list(loaded_data.values()))
-        dataframe = pivot_per_variable(dataframe)
+        # dataframe = merge_type_specific_dataframes(list(loaded_data.values()))
+        # dataframe = pivot_per_variable(dataframe)
+        dataframes = [pivot_per_variable(dataframe) for dataframe in loaded_data.values()]
+        dataframe = pd.concat(dataframes, axis="columns")
         self.data = pd.concat([self.data, dataframe])
         self.data = self.data.sort_index()
         # TODO: if possible, don't sort repeatedly

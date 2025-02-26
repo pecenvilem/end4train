@@ -157,6 +157,10 @@ def decode_log_file(content: bytes | bytearray, data_object_map: dict[str, Kaita
 def decode_p_packet(content: bytes | bytearray, data_object_map: dict[str, KaitaiType]) -> dict[Type, pd.DataFrame]:
     packet = PPacket.from_bytes(content)
     packet._read()
+    return parse_p_packet(packet, data_object_map)
+
+
+def parse_p_packet(packet: PPacket, data_object_map: dict[str, KaitaiType]) -> dict[Type, pd.DataFrame]:
     data_store = RecordDataStore()
     for record_object in packet.body.records:
         load_data_attributes(
@@ -184,7 +188,7 @@ def merge_type_specific_dataframes(dataframes: Sequence[pd.DataFrame]) -> pd.Dat
         return pd.DataFrame()
     sample_frame = dataframes[0]
     all_data = pd.DataFrame({column: pd.Series(dtype=dt) for column, dt in sample_frame.dtypes.to_dict().items()})
-    all_data["value"] = all_data["value"].astype(object)
+    all_data = all_data.astype({"value": object})
     for data_frame in dataframes:
-        all_data = pd.concat([all_data, data_frame])
+        all_data = pd.concat([all_data, data_frame]) if not all_data.empty else data_frame.astype(all_data.dtypes)
     return all_data
