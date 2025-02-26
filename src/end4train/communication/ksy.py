@@ -45,10 +45,6 @@ class KaitaiDataAttribute:
     repetitions: None | int
 
 
-# TODO: Add attribute specifying pandas dtype for data-attribute (as an attribute of "html" tag <data>)
-#  or somehow rework the main TimsMonitor app so that it doesn't merge individual type-specific dataframes
-#  as returned by 'parse_records'
-
 @dataclass
 class KaitaiType:
     kaitai_name: str
