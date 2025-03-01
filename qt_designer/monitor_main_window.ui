@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>969</width>
+    <width>932</width>
     <height>742</height>
    </rect>
   </property>
@@ -166,7 +166,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>969</width>
+     <width>932</width>
      <height>22</height>
     </rect>
    </property>
@@ -180,17 +180,18 @@
    </widget>
    <widget class="QMenu" name="menuWindow">
     <property name="title">
-     <string>Window</string>
+     <string>View</string>
     </property>
     <addaction name="actionPlot"/>
     <addaction name="actionMap"/>
     <addaction name="separator"/>
+    <addaction name="actionSave_Layout"/>
     <addaction name="actionReset_Layout"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuWindow"/>
   </widget>
-  <widget class="QDockWidget" name="dockWidget_3">
+  <widget class="QDockWidget" name="dock_plot">
    <property name="windowTitle">
     <string>Plot</string>
    </property>
@@ -221,7 +222,7 @@
     </layout>
    </widget>
   </widget>
-  <widget class="QDockWidget" name="dockWidget_4">
+  <widget class="QDockWidget" name="dock_map">
    <property name="windowTitle">
     <string>Map</string>
    </property>
@@ -261,6 +262,12 @@
    </property>
   </action>
   <action name="actionPlot">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Plot</string>
    </property>
@@ -269,6 +276,12 @@
    </property>
   </action>
   <action name="actionMap">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Map</string>
    </property>
@@ -278,7 +291,7 @@
   </action>
   <action name="actionReset_Layout">
    <property name="text">
-    <string>Reset Layout</string>
+    <string>Restore Layout</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+R</string>
@@ -295,6 +308,11 @@
     <string>Ctrl+O</string>
    </property>
   </action>
+  <action name="actionSave_Layout">
+   <property name="text">
+    <string>Save Layout</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -309,5 +327,70 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>actionMap</sender>
+   <signal>triggered(bool)</signal>
+   <receiver>dock_map</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>759</x>
+     <y>547</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionPlot</sender>
+   <signal>triggered(bool)</signal>
+   <receiver>dock_plot</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>759</x>
+     <y>195</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>dock_map</sender>
+   <signal>visibilityChanged(bool)</signal>
+   <receiver>actionMap</receiver>
+   <slot>setChecked(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>759</x>
+     <y>547</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>dock_plot</sender>
+   <signal>visibilityChanged(bool)</signal>
+   <receiver>actionPlot</receiver>
+   <slot>setChecked(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>722</x>
+     <y>195</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

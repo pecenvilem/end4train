@@ -5,7 +5,8 @@ from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QMainWindow, QAbstractItemView
 
 from end4train.app.traces_model import TracesModel
-from end4train.config.app import COMPANY, APP_NAME, WINDOW_STATE_KEY, WINDOW_GEOMETRY_KEY, SETTINGS_VERSION_NUMBER
+from end4train.config.app import COMPANY, APP_NAME, WINDOW_STATE_KEY, WINDOW_GEOMETRY_KEY, \
+     SaveOwner, SETTINGS_VERSION_NUMBER
 from end4train.config.dummy_device import TEST_HOT_HOST, TEST_EOT_HOST
 from end4train.ui.main_window_ui import Ui_MainWindow
 from end4train.app.dataframe_model import PandasModel
@@ -25,6 +26,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QSettings.Format.IniFormat, QSettings.Scope.UserScope, COMPANY, APP_NAME
         )
         self.load_settings()
+
+        self.actionSave_Layout.triggered.connect(lambda: self.save_settings(SaveOwner.USER))
+        self.actionReset_Layout.triggered.connect(lambda: self.load_settings(SaveOwner.USER))
 
         self.hot_btn.setChecked(True)
 
@@ -53,15 +57,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # timer.timeout.connect(lambda: self.map.rootObject().setProperty("position", QGeoCoordinate(50.1, 14.5)))
         # timer.start(5000)
 
-    def load_settings(self) -> None:
-        state = self.settings.value(WINDOW_STATE_KEY)
-        geometry = self.settings.value(WINDOW_GEOMETRY_KEY)
+    def load_settings(self, owner: SaveOwner = SaveOwner.SHUTDOWN_AUTOSAVE) -> None:
+        # TODO: fix - settings object
+        state = self.settings.value(f"{WINDOW_STATE_KEY}/{owner}")
+        geometry = self.settings.value(f"{WINDOW_GEOMETRY_KEY}/{owner}")
         self.restoreState(state, SETTINGS_VERSION_NUMBER)
         self.restoreGeometry(geometry)
 
-    def save_settings(self) -> None:
-        self.settings.setValue(WINDOW_STATE_KEY, self.saveState(SETTINGS_VERSION_NUMBER))
-        self.settings.setValue(WINDOW_GEOMETRY_KEY, self.saveGeometry())
+    def save_settings(self, owner: SaveOwner = SaveOwner.SHUTDOWN_AUTOSAVE) -> None:
+        self.settings.setValue(f"{WINDOW_STATE_KEY}/{owner}", self.saveState(SETTINGS_VERSION_NUMBER))
+        self.settings.setValue(f"{WINDOW_GEOMETRY_KEY}/{owner}", self.saveGeometry())
 
     def toggle_listener(self):
         self.toggle_listener_callback(
