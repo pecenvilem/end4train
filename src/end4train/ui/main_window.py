@@ -1,9 +1,11 @@
 from typing import Callable
 
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import QUrl, QSettings, QEvent
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QMainWindow, QAbstractItemView
 
 from end4train.app.traces_model import TracesModel
+from end4train.config.app import COMPANY, APP_NAME, WINDOW_STATE_KEY, WINDOW_GEOMETRY_KEY, SETTINGS_VERSION_NUMBER
 from end4train.config.dummy_device import TEST_HOT_HOST, TEST_EOT_HOST
 from end4train.ui.main_window_ui import Ui_MainWindow
 from end4train.app.dataframe_model import PandasModel
@@ -19,6 +21,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                  ):
         super().__init__()
         self.setupUi(self)
+        self.settings = QSettings(
+            QSettings.Format.IniFormat, QSettings.Scope.UserScope, COMPANY, APP_NAME
+        )
+        self.load_settings()
+
         self.hot_btn.setChecked(True)
 
         self.toggle_listener_callback = toggle_listener_callback
@@ -46,6 +53,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # timer.timeout.connect(lambda: self.map.rootObject().setProperty("position", QGeoCoordinate(50.1, 14.5)))
         # timer.start(5000)
 
+    def load_settings(self) -> None:
+        state = self.settings.value(WINDOW_STATE_KEY)
+        geometry = self.settings.value(WINDOW_GEOMETRY_KEY)
+        self.restoreState(state, SETTINGS_VERSION_NUMBER)
+        self.restoreGeometry(geometry)
+
+    def save_settings(self) -> None:
+        self.settings.setValue(WINDOW_STATE_KEY, self.saveState(SETTINGS_VERSION_NUMBER))
+        self.settings.setValue(WINDOW_GEOMETRY_KEY, self.saveGeometry())
+
     def toggle_listener(self):
         self.toggle_listener_callback(
             self.get_selected_host(),
@@ -65,3 +82,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def get_selected_traces(self):
         return list(item.data() for item in self.traces_list_view.selectionModel().selectedRows())
+
+    def closeEvent(self, event: QCloseEvent) -> bool:
+        self.save_settings()
+        return False

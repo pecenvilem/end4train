@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'monitor_main_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.0
+## Created by: Qt User Interface Compiler version 6.8.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -32,6 +32,8 @@ class Ui_MainWindow(object):
         MainWindow.resize(934, 744)
         icon = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.Computer))
         MainWindow.setWindowIcon(icon)
+        MainWindow.setDockNestingEnabled(True)
+        MainWindow.setDockOptions(QMainWindow.DockOption.AllowNestedDocks|QMainWindow.DockOption.AllowTabbedDocks|QMainWindow.DockOption.AnimatedDocks|QMainWindow.DockOption.GroupedDragging)
         self.actionClose = QAction(MainWindow)
         self.actionClose.setObjectName(u"actionClose")
         self.actionPlot = QAction(MainWindow)

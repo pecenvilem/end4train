@@ -12,7 +12,7 @@ class PandasModel(QAbstractTableModel):
     """A model to interface a Qt view with pandas dataframe """
 
     def __init__(self, dataframe: pd.DataFrame, parent=None):
-        QAbstractTableModel.__init__(self, parent)
+        super().__init__(parent)
         self._dataframe = dataframe
 
     def rowCount(self, parent=QModelIndex()) -> int:
@@ -42,7 +42,7 @@ class PandasModel(QAbstractTableModel):
         if not index.isValid():
             return None
 
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return str(self._dataframe.iloc[index.row(), index.column()])
 
         return None
@@ -54,11 +54,11 @@ class PandasModel(QAbstractTableModel):
 
         Return dataframe index as vertical header data and columns as horizontal header data.
         """
-        if role == Qt.DisplayRole:
-            if orientation == Qt.Horizontal:
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
                 return str(self._dataframe.columns[section])
 
-            if orientation == Qt.Vertical:
+            if orientation == Qt.Orientation.Vertical:
                 return str(self._dataframe.index[section])
 
         return None

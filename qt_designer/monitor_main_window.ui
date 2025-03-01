@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>934</width>
-    <height>744</height>
+    <width>969</width>
+    <height>742</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,6 +15,12 @@
   </property>
   <property name="windowIcon">
    <iconset theme="QIcon::ThemeIcon::Computer"/>
+  </property>
+  <property name="dockNestingEnabled">
+   <bool>true</bool>
+  </property>
+  <property name="dockOptions">
+   <set>QMainWindow::DockOption::AllowNestedDocks|QMainWindow::DockOption::AllowTabbedDocks|QMainWindow::DockOption::AnimatedDocks|QMainWindow::DockOption::GroupedDragging</set>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="autoFillBackground">
@@ -160,7 +166,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>934</width>
+     <width>969</width>
      <height>22</height>
     </rect>
    </property>
@@ -168,6 +174,8 @@
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="actionOpen_log"/>
+    <addaction name="separator"/>
     <addaction name="actionClose"/>
    </widget>
    <widget class="QMenu" name="menuWindow">
@@ -176,6 +184,8 @@
     </property>
     <addaction name="actionPlot"/>
     <addaction name="actionMap"/>
+    <addaction name="separator"/>
+    <addaction name="actionReset_Layout"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuWindow"/>
@@ -254,10 +264,35 @@
    <property name="text">
     <string>Plot</string>
    </property>
+   <property name="shortcut">
+    <string>Alt+P</string>
+   </property>
   </action>
   <action name="actionMap">
    <property name="text">
     <string>Map</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+M</string>
+   </property>
+  </action>
+  <action name="actionReset_Layout">
+   <property name="text">
+    <string>Reset Layout</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+R</string>
+   </property>
+  </action>
+  <action name="actionOpen_log">
+   <property name="icon">
+    <iconset theme="QIcon::ThemeIcon::DocumentOpen"/>
+   </property>
+   <property name="text">
+    <string>Open log</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
    </property>
   </action>
  </widget>
