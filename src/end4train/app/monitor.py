@@ -15,6 +15,8 @@ from end4train.communication.ksy import KSYInfoStore
 from end4train.ui.main_window import MainWindow
 from end4train.app.dataframe_model import PandasModel
 
+# TODO: add option to reopen docked windows
+
 # TODO: rework using AnyIO
 # TODO: design a way to call teardown for TimsDevice.stop()
 # TODO: add device discovery (see. scratch.txt and handwritten notes)
