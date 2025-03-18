@@ -4,6 +4,7 @@ from typing import List
 import pandas as pd
 import pyqtgraph as pg
 from PySide6.QtWidgets import QApplication, QFileDialog
+from PySide6.QtCore import Qt
 from pandas.core.dtypes.common import is_numeric_dtype
 
 from end4train.app.device_connectors import OnLineListener, LogDownloader, DataSource
@@ -27,10 +28,15 @@ from end4train.app.dataframe_model import PandasModel
 
 # TODO: add analog gauges (possibly implement a simple one from scratch...)
 
+# TODO: add UI for selecting style and possibly overriding color theme
+
 
 class Monitor:
     def __init__(self, argv: List[str]):
         self._app = QApplication(argv)
+
+        self._app.setStyle("windows11")
+        self._app.styleHints().setColorScheme(Qt.ColorScheme.Light)
 
         self.data = pd.DataFrame()
         self.data_model = PandasModel(self.data)

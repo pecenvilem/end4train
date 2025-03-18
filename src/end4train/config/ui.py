@@ -1,3 +1,11 @@
-from PySide6.QtCore import QPoint
+from PySide6.QtCore import QPointF
 
-NEEDLE_CENTRE = QPoint(2, 24)
+DEFAULT_NEEDLE_CENTRE  = QPointF(2, 24)
+DEFAULT_OBE_BASE_CENTRE = QPointF(25, 25)
+DEFAULT_OBE_RING_CENTRE = QPointF(57, 36)
+
+SVG_MAIN_GROUP_ITEM_ID = "main_group"
+SVG_CENTRE_POINT_ITEM_ID = "centre"
+TRANSFORM_ATTRIBUTE_NAME = "transform"
+SVG_CENTRE_X = "cx"
+SVG_CENTRE_Y = "cy"

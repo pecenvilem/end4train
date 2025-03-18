@@ -9,6 +9,8 @@
    id="svg1"
    inkscape:version="1.4 (86a8ad7, 2024-10-11)"
    sodipodi:docname="needle.svg"
+   inkscape:export-batch-path="..\..\src\end4train\ui\res"
+   inkscape:export-batch-name=""
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -25,9 +27,9 @@
      borderopacity="0.3"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="16"
-     inkscape:cx="6.125"
-     inkscape:cy="20.46875"
+     inkscape:zoom="22.627417"
+     inkscape:cx="-5.855728"
+     inkscape:cy="-7.9770484"
      inkscape:document-units="pt"
      inkscape:showpageshadow="0"
      inkscape:pagecheckerboard="0"
@@ -40,7 +42,7 @@
      inkscape:window-x="-8"
      inkscape:window-y="-8"
      inkscape:window-maximized="1"
-     inkscape:current-layer="svg1">
+     inkscape:current-layer="main_group">
     <inkscape:grid
        id="grid2"
        units="px"
@@ -55,6 +57,20 @@
        empspacing="5"
        enabled="true"
        visible="true" />
+    <sodipodi:guide
+       position="0,30"
+       orientation="0,1"
+       id="guide1"
+       inkscape:locked="false"
+       inkscape:label=""
+       inkscape:color="rgb(0,134,229)" />
+    <sodipodi:guide
+       position="0,30"
+       orientation="-1,0"
+       id="guide2"
+       inkscape:locked="false"
+       inkscape:label=""
+       inkscape:color="rgb(0,134,229)" />
   </sodipodi:namedview>
   <metadata
      id="metadata1">
@@ -67,11 +83,23 @@
       </cc:Work>
     </rdf:RDF>
   </metadata>
-  <path
-     id="needle"
-     transform-origin="2 24"
-     style="display:inline;opacity:1;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282843;stroke-dasharray:none"
-     d="M 2,0 1.7333334,0.90000224 1.2,21.9 C 0.44288584,22.241213 0.00204135,23.082446 0,24 c 0.00162268,0.852691 0.43157024,1.631082 1.1104166,2.010351 L 0.93333336,30 H 3.0666666 L 2.8895834,26.010351 C 3.5684297,25.631082 3.9983737,24.852691 4,24 4.0000995,23.048217 3.5970193,22.219243 2.8,21.9 L 2.2666666,0.90000224 Z"
-     inkscape:label="needle"
-     sodipodi:nodetypes="cccccccccccc" />
+  <g
+     inkscape:groupmode="layer"
+     id="main_group"
+     inkscape:label="needle">
+    <circle
+       style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.400001"
+       id="circle1"
+       cx="0"
+       cy="4.7683716e-07"
+       r="2"
+       inkscape:label="hub" />
+    <path
+       id="needle"
+       transform-origin="2 24"
+       style="display:inline;opacity:1;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282843;stroke-dasharray:none"
+       d="m 0.01562512,-23.8125 -0.2666666,0.900003 -0.5427084,21.0604135 v 3.704166 L -1.0510415,6.1875005 H 1.0822917 L 0.79375002,1.8520825 v -3.704166 L 0.28229172,-22.912497 Z"
+       inkscape:label="arm"
+       sodipodi:nodetypes="cccccccccc" />
+  </g>
 </svg>
