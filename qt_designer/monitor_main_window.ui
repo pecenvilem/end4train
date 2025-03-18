@@ -176,6 +176,8 @@
     </property>
     <addaction name="actionOpen_log"/>
     <addaction name="separator"/>
+    <addaction name="actionSettings"/>
+    <addaction name="separator"/>
     <addaction name="actionClose"/>
    </widget>
    <widget class="QMenu" name="menuWindow">
@@ -311,6 +313,22 @@
   <action name="actionSave_Layout">
    <property name="text">
     <string>Save Layout</string>
+   </property>
+  </action>
+  <action name="actionVista">
+   <property name="text">
+    <string>Vista</string>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="icon">
+    <iconset theme="QIcon::ThemeIcon::DocumentProperties"/>
+   </property>
+   <property name="text">
+    <string>Settings</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+K</string>
    </property>
   </action>
  </widget>
