@@ -4,8 +4,9 @@ from enum import StrEnum, auto
 COMPANY = "fdcvut"
 APP_NAME = "tims_monitor"
 
-WINDOW_STATE_KEY = "windowState"
-WINDOW_GEOMETRY_KEY = "windowGeometry"
+class SettingsKey(StrEnum):
+    WINDOW_STATE = "windowState"
+    GEOMETRY_STATE = "windowGeometry"
 
 class SaveOwner(StrEnum):
     SHUTDOWN_AUTOSAVE = "shutdownAutosave"

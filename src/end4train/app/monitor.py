@@ -1,5 +1,5 @@
 from functools import partial
-from typing import List
+from typing import List, Callable
 
 import pandas as pd
 import pyqtgraph as pg
@@ -31,14 +31,25 @@ from end4train.app.dataframe_model import PandasModel
 # TODO: add UI for selecting style and possibly overriding color theme
 
 
+class Gui(QApplication):
+    def __init__(
+            self, argv: List[str],
+            shutdown_callback: Callable,
+            starting_data: pd.DataFrame,
+    ) -> None:
+        super().__init__(argv)
+
+        self.setStyle("windows11")
+        self.styleHints().setColorScheme(Qt.ColorScheme.Light)
+        self.aboutToQuit.connect(shutdown_callback)
+
+
 class Monitor:
     def __init__(self, argv: List[str]):
-        self._app = QApplication(argv)
-
-        self._app.setStyle("windows11")
-        self._app.styleHints().setColorScheme(Qt.ColorScheme.Light)
-
         self.data = pd.DataFrame()
+
+        self.gui_app = Gui(argv, self.shutdown, self.data)
+
         self.data_model = PandasModel(self.data)
 
         self.traces_model = TracesModel()
@@ -47,8 +58,6 @@ class Monitor:
         self.ksy_info_store = KSYInfoStore(RECORD_OBJECT_KSY_PATH)
         self.listener = OnLineListener(partial(self.add_data, source=DataSource.P_PACKET))
         self.downloader = LogDownloader(self.add_data, "hot")
-
-        self._app.aboutToQuit.connect(self.shutdown)
 
         self.main_window = MainWindow(
             self.toggle_listener, self.download_log, self.select_traces, self.traces_model, self.data_model,
@@ -137,4 +146,4 @@ class Monitor:
         self.add_data(data, DataSource.LOG_FILE)
 
     def run(self):
-        self._app.exec()
+        self.gui_app.exec()

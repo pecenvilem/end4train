@@ -5,8 +5,7 @@ from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QMainWindow, QAbstractItemView
 
 from end4train.app.traces_model import TracesModel
-from end4train.config.app import COMPANY, APP_NAME, WINDOW_STATE_KEY, WINDOW_GEOMETRY_KEY, \
-     SaveOwner, SETTINGS_VERSION_NUMBER
+from end4train.config.app import COMPANY, APP_NAME, SETTINGS_VERSION_NUMBER, SaveOwner, SettingsKey
 from end4train.config.dummy_device import TEST_HOT_HOST, TEST_EOT_HOST
 from end4train.ui.main_window_ui import Ui_MainWindow
 from end4train.app.dataframe_model import PandasModel
@@ -36,7 +35,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.request_download_callback = request_download_callback
         self.select_traces_callback = select_traces_callback
         self.traces_list_view.setModel(trace_item_model)
-        self.traces_list_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.traces_list_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.table.setModel(data_table_model)
 
         self.plot.setBackground("white")
@@ -59,14 +58,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def load_settings(self, owner: SaveOwner = SaveOwner.SHUTDOWN_AUTOSAVE) -> None:
         # TODO: fix - settings object
-        state = self.settings.value(f"{WINDOW_STATE_KEY}/{owner}")
-        geometry = self.settings.value(f"{WINDOW_GEOMETRY_KEY}/{owner}")
+        state = self.settings.value(f"{SettingsKey.WINDOW_STATE}/{owner}")
+        geometry = self.settings.value(f"{SettingsKey.GEOMETRY_STATE}/{owner}")
         self.restoreState(state, SETTINGS_VERSION_NUMBER)
         self.restoreGeometry(geometry)
 
     def save_settings(self, owner: SaveOwner = SaveOwner.SHUTDOWN_AUTOSAVE) -> None:
-        self.settings.setValue(f"{WINDOW_STATE_KEY}/{owner}", self.saveState(SETTINGS_VERSION_NUMBER))
-        self.settings.setValue(f"{WINDOW_GEOMETRY_KEY}/{owner}", self.saveGeometry())
+        self.settings.setValue(f"{SettingsKey.WINDOW_STATE}/{owner}", self.saveState(SETTINGS_VERSION_NUMBER))
+        self.settings.setValue(f"{SettingsKey.GEOMETRY_STATE}/{owner}", self.saveGeometry())
 
     def toggle_listener(self):
         self.toggle_listener_callback(
