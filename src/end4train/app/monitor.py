@@ -1,4 +1,5 @@
 from functools import partial
+from pathlib import Path
 from typing import List, Callable
 
 import pandas as pd
@@ -36,6 +37,9 @@ class Gui(QApplication):
             self, argv: List[str],
             shutdown_callback: Callable,
             starting_data: pd.DataFrame,
+            toggle_listener: Callable[[str, bool], None],
+            download_log: Callable[[str], None],
+            load_file: Callable[[Path], None],
     ) -> None:
         super().__init__(argv)
 
@@ -43,64 +47,29 @@ class Gui(QApplication):
         self.styleHints().setColorScheme(Qt.ColorScheme.Light)
         self.aboutToQuit.connect(shutdown_callback)
 
+        self.load_file_callback = load_file
 
-class Monitor:
-    def __init__(self, argv: List[str]):
-        self.data = pd.DataFrame()
-
-        self.gui_app = Gui(argv, self.shutdown, self.data)
-
+        self.data = starting_data
         self.data_model = PandasModel(self.data)
 
         self.traces_model = TracesModel()
         self.plot_traces = {}
 
-        self.ksy_info_store = KSYInfoStore(RECORD_OBJECT_KSY_PATH)
-        self.listener = OnLineListener(partial(self.add_data, source=DataSource.P_PACKET))
-        self.downloader = LogDownloader(self.add_data, "hot")
-
         self.main_window = MainWindow(
-            self.toggle_listener, self.download_log, self.select_traces, self.traces_model, self.data_model,
+            toggle_listener, download_log, self.select_traces, self.traces_model, self.data_model,
         )
+        self.main_window.actionOpen_log.triggered.connect(self.load_file)
 
         self.plot = self.main_window.plot
         self.main_window.open_btn.clicked.connect(self.load_file)
 
         self.main_window.show()
 
-    def shutdown(self):
-        self.listener.stop("hot")
-        self.listener.stop("eot")
-        self.downloader.stop()
-
-    def download_log(self, host: str):
-        self.downloader = LogDownloader(self.add_data, host)
-        self.downloader.download()
-
-    def add_data(self, data, source: DataSource):
-        if source == DataSource.LOG_FILE:
-            loaded_data = decode_log_file(data, self.ksy_info_store.get_class_to_kaitai_type_map())
-        elif source == DataSource.P_PACKET:
-            loaded_data = parse_p_packet(data, self.ksy_info_store.get_class_to_kaitai_type_map())
-        else:
+    def load_file(self) -> None:
+        file, selected_filter = QFileDialog.getOpenFileName(parent=self.main_window)
+        if not file:
             return
-        # dataframe = merge_type_specific_dataframes(list(loaded_data.values()))
-        # dataframe = pivot_per_variable(dataframe)
-        dataframes = [pivot_per_variable(dataframe) for dataframe in loaded_data.values()]
-        dataframe = pd.concat(dataframes, axis="columns")
-        self.data = pd.concat([self.data, dataframe])
-        self.data = self.data.sort_index()
-        # TODO: if possible, don't sort repeatedly
-        selected_traces = self.main_window.get_selected_traces()
-        self.data_model.set_new_data(self.data[selected_traces])
-        self.traces_model.update_traces(self.data.columns.tolist())
-        self.update_plot(list(self.plot_traces.keys()))
-
-    def toggle_listener(self, host: str, listen: bool):
-        if listen:
-            self.listener.listen(host)
-        else:
-            self.listener.stop(host)
+        self.load_file_callback(Path(file))
 
     def select_traces(self, selection):
         self.data_model.set_new_data(self.data[selection])
@@ -139,9 +108,60 @@ class Monitor:
             data = self.data[trace].dropna()
             self.plot_traces[trace]["data_line"].setData(data.index.astype('int64') // 10 ** 9, data.to_list())
 
-    def load_file(self):
-        path, _ = QFileDialog.getOpenFileName(parent=self.main_window)
-        with open(path, "rb") as f:
+
+    def add_data(self, data: pd.DataFrame) -> None:
+        self.data = pd.concat([self.data, data])
+        # TODO: if possible, don't sort repeatedly
+        self.data = self.data.sort_index()
+        selected_traces = self.main_window.get_selected_traces()
+        self.data_model.set_new_data(self.data[selected_traces])
+        self.traces_model.update_traces(self.data.columns.tolist())
+        self.update_plot(list(self.plot_traces.keys()))
+
+
+class Monitor:
+    def __init__(self, argv: List[str]):
+        self.data = pd.DataFrame()
+
+        self.gui_app = Gui(argv, self.shutdown, self.data, self.toggle_listener, self.download_log, self.load_file)
+
+        self.ksy_info_store = KSYInfoStore(RECORD_OBJECT_KSY_PATH)
+        self.listener = OnLineListener(partial(self.add_data, source=DataSource.P_PACKET))
+        self.downloader = LogDownloader(self.add_data, "hot")
+
+    def shutdown(self):
+        self.listener.stop("hot")
+        self.listener.stop("eot")
+        self.downloader.stop()
+
+    def download_log(self, host: str):
+        self.downloader = LogDownloader(self.add_data, host)
+        self.downloader.download()
+
+    def add_data(self, data, source: DataSource):
+        if source == DataSource.LOG_FILE:
+            loaded_data = decode_log_file(data, self.ksy_info_store.get_class_to_kaitai_type_map())
+        elif source == DataSource.P_PACKET:
+            loaded_data = parse_p_packet(data, self.ksy_info_store.get_class_to_kaitai_type_map())
+        else:
+            return
+        # dataframe = merge_type_specific_dataframes(list(loaded_data.values()))
+        # dataframe = pivot_per_variable(dataframe)
+        dataframes = [pivot_per_variable(dataframe) for dataframe in loaded_data.values()]
+        dataframe = pd.concat(dataframes, axis="columns")
+        self.data = pd.concat([self.data, dataframe])
+        # TODO: if possible, don't sort repeatedly
+        self.data = self.data.sort_index()
+        self.gui_app.add_data(dataframe)
+
+    def toggle_listener(self, host: str, listen: bool):
+        if listen:
+            self.listener.listen(host)
+        else:
+            self.listener.stop(host)
+
+    def load_file(self, file: Path):
+        with open(file, "rb") as f:
             data = f.read()
         self.add_data(data, DataSource.LOG_FILE)
 
