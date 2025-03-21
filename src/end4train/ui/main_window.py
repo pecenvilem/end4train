@@ -18,16 +18,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                  select_traces_callback: Callable,
                  trace_item_model: TracesModel,
                  data_table_model: PandasModel,
+                 settings: QSettings,
+                 edit_theme: Callable
                  ):
         super().__init__()
         self.setupUi(self)
-        self.settings = QSettings(
-            QSettings.Format.IniFormat, QSettings.Scope.UserScope, COMPANY, APP_NAME
-        )
-        self.load_settings()
+        self.settings = settings
+        self.load_layout()
 
-        self.actionSave_Layout.triggered.connect(lambda: self.save_settings(SaveOwner.USER))
-        self.actionReset_Layout.triggered.connect(lambda: self.load_settings(SaveOwner.USER))
+        self.actionSave_Layout.triggered.connect(lambda: self.save_layout(SaveOwner.USER))
+        self.actionReset_Layout.triggered.connect(lambda: self.load_layout(SaveOwner.USER))
+        self.actionSettings.triggered.connect(edit_theme)
 
         self.hot_btn.setChecked(True)
 
@@ -56,14 +57,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # timer.timeout.connect(lambda: self.map.rootObject().setProperty("position", QGeoCoordinate(50.1, 14.5)))
         # timer.start(5000)
 
-    def load_settings(self, owner: SaveOwner = SaveOwner.SHUTDOWN_AUTOSAVE) -> None:
+    def load_layout(self, owner: SaveOwner = SaveOwner.SHUTDOWN_AUTOSAVE) -> None:
         # TODO: fix - settings object
         state = self.settings.value(f"{SettingsKey.WINDOW_STATE}/{owner}")
         geometry = self.settings.value(f"{SettingsKey.GEOMETRY_STATE}/{owner}")
         self.restoreState(state, SETTINGS_VERSION_NUMBER)
         self.restoreGeometry(geometry)
 
-    def save_settings(self, owner: SaveOwner = SaveOwner.SHUTDOWN_AUTOSAVE) -> None:
+    def save_layout(self, owner: SaveOwner = SaveOwner.SHUTDOWN_AUTOSAVE) -> None:
         self.settings.setValue(f"{SettingsKey.WINDOW_STATE}/{owner}", self.saveState(SETTINGS_VERSION_NUMBER))
         self.settings.setValue(f"{SettingsKey.GEOMETRY_STATE}/{owner}", self.saveGeometry())
 
@@ -88,5 +89,5 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return list(item.data() for item in self.traces_list_view.selectionModel().selectedRows())
 
     def closeEvent(self, event: QCloseEvent) -> bool:
-        self.save_settings()
+        self.save_layout()
         return False

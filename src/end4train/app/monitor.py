@@ -4,18 +4,21 @@ from typing import List, Callable
 
 import pandas as pd
 import pyqtgraph as pg
-from PySide6.QtWidgets import QApplication, QFileDialog
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QFileDialog, QStyleFactory
+from PySide6.QtCore import Qt, QSettings
 from pandas.core.dtypes.common import is_numeric_dtype
 
 from end4train.app.device_connectors import OnLineListener, LogDownloader, DataSource
 from end4train.app.traces_model import TracesModel
+from end4train.config.app import COMPANY, APP_NAME, SettingsKey
 from end4train.config.paths import RECORD_OBJECT_KSY_PATH
 from end4train.communication.decode import decode_log_file, merge_type_specific_dataframes, decode_p_packet, \
     pivot_per_variable, parse_p_packet
 from end4train.communication.ksy import KSYInfoStore
 from end4train.ui.main_window import MainWindow
 from end4train.app.dataframe_model import PandasModel
+from end4train.ui.settings_dialog import SettingsDialog
+
 
 # TODO: rework using AnyIO
 # TODO: design a way to call teardown for TimsDevice.stop()
@@ -43,8 +46,10 @@ class Gui(QApplication):
     ) -> None:
         super().__init__(argv)
 
-        self.setStyle("windows11")
-        self.styleHints().setColorScheme(Qt.ColorScheme.Light)
+        self.settings = QSettings(
+            QSettings.Format.IniFormat, QSettings.Scope.UserScope, COMPANY, APP_NAME
+        )
+
         self.aboutToQuit.connect(shutdown_callback)
 
         self.load_file_callback = load_file
@@ -56,7 +61,8 @@ class Gui(QApplication):
         self.plot_traces = {}
 
         self.main_window = MainWindow(
-            toggle_listener, download_log, self.select_traces, self.traces_model, self.data_model,
+            toggle_listener, download_log, self.select_traces, self.traces_model, self.data_model, self.settings,
+            self.edit_theme
         )
         self.main_window.actionOpen_log.triggered.connect(self.load_file)
 
@@ -70,6 +76,36 @@ class Gui(QApplication):
         if not file:
             return
         self.load_file_callback(Path(file))
+
+
+    def set_theme(self):
+        self.set_style()
+        self.set_color_scheme()
+
+    def set_color_scheme(self):
+        color_scheme = self.settings.value(f"{SettingsKey.COLOR_SCHEME}")
+        if not isinstance(color_scheme, int):
+            self.styleHints().setColorScheme(Qt.ColorScheme.Unknown)
+            return
+        self.styleHints().setColorScheme(Qt.ColorScheme(color_scheme))
+
+
+    def set_style(self):
+        style = self.settings.value(f"{SettingsKey.WINDOW_STATE}")
+        if style is None:
+            return
+        self.setStyle("windows11")
+
+    def edit_theme(self):
+        styles = [style.lower() for style in QStyleFactory.keys()]
+
+        dialog = SettingsDialog(self.main_window, styles)
+        dialog.accepted.connect(self.store_theme)
+        dialog.setModal(True)
+        dialog.open()
+
+    def store_theme(self):
+        pass
 
     def select_traces(self, selection):
         self.data_model.set_new_data(self.data[selection])
