@@ -4,11 +4,12 @@ from enum import StrEnum, auto
 COMPANY = "fdcvut"
 APP_NAME = "tims_monitor"
 
+
 class SettingsKey(StrEnum):
     WINDOW_STATE = "windowState"
     GEOMETRY_STATE = "windowGeometry"
-    STYLE = "style"
-    COLOR_SCHEME = "colorScheme"
+    STYLE = "theme/style"
+    COLOR_SCHEME = "theme/colorScheme"
 
 
 class SaveOwner(StrEnum):
