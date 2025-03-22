@@ -6,7 +6,7 @@ from typing import Iterable, Any
 import faulthandler
 
 from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject
-from PySide6.QtWidgets import QApplication, QTreeView
+from PySide6.QtWidgets import QApplication, QTreeView, QStyledItemDelegate, QWidget, QComboBox
 
 
 def drop_duplicates(original: Iterable[str]) -> list[str]:
@@ -29,22 +29,10 @@ class SettingsNode:
 
 
 class SettingsModel(QAbstractItemModel):
-
-    def __init__(self, parent: QObject | None = None):
+    def __init__(self, settings_data: dict, parent: QObject | None = None):
         super().__init__(parent)
-
         self._headers = ("key", "value")
-        self.data_store = {
-            "theme/style": "Style",
-            "theme/colorScheme": "Scheme",
-            "windowState": "State",
-            "windowGeometry": "Geo",
-        }
-        self.root_node = SettingsModel.build_tree(self.data_store)
-
-        # needed to keep ref_count for "implicit" keys e.g. 'theme' for 'theme/style',
-        # because Qt doesn't keep it and interpreter would GC them
-        self._key_ref = list()
+        self.root_node = SettingsModel.build_tree(settings_data)
 
     @staticmethod
     def build_tree(settings: dict) -> SettingsNode:
@@ -61,59 +49,24 @@ class SettingsModel(QAbstractItemModel):
                 parent = parent.children[path]
         return root
 
-    @staticmethod
-    def get_rank(key: str) -> int:
-        return len(split_levels(key)) if key != "" else 0
-
-    @staticmethod
-    def levels_before_rank(key: str, rank: int) -> str:
-        # TODO: add check for negative rank and define custom exception
-        levels = split_levels(key)
-        return "/".join(levels[0:rank])
-
-    @staticmethod
-    def get_parent_key(key: str) -> str:
-        levels = split_levels(key)
-        parent_levels = levels[:-1]
-        if not parent_levels:
-            return ""
-        return "/".join(parent_levels)
-
-    def get_descendants(self, key: str) -> list[str]:
-        descendants = []
-        for other_key in self.data_store:
-            if other_key == key:
-                continue
-            if not other_key.startswith(key):
-                continue
-            descendants.append(other_key)
-        return descendants
-
-    def get_children(self, key: str) -> list[str]:
-        descendants = self.get_descendants(key)
-        rank = SettingsModel.get_rank(key)
-        return drop_duplicates(
-            SettingsModel.levels_before_rank(descendant, rank + 1) for descendant in descendants
-        )
-
-    def get_index_in_parent(self, key: str) -> int:
-        # return self.get_children(key).index(key)
-        parent_key = SettingsModel.get_parent_key(key)
-        return self.get_children(parent_key).index(key)
-
-    def get_child(self, parent: str, index: int) -> str:
-        return self.get_children(parent)[index]
-
-
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
+        node: SettingsNode = index.internalPointer()
+        if role == Qt.ItemDataRole.DisplayRole:
+            if index.column() == 0:
+                return node.stem
+            elif index.column() == 1:
+                return node.value
+        elif role == Qt.ItemDataRole.EditRole:
+            if index.column() == 1:
+                return node.value
 
     def setData(self, index, value, /, role = ...):
         if role == Qt.ItemDataRole.EditRole:
             if index.column() == 1:
-                key = index.internalPointer()
-                self.data_store[key] = str(value)
+                node: SettingsNode = index.internalPointer()
+                node.value = str(value)
                 self.dataChanged.emit(index, index, [Qt.ItemDataRole.EditRole])
                 return True
         return False
@@ -129,24 +82,25 @@ class SettingsModel(QAbstractItemModel):
     def index(self, row: int, column: int, parent: QModelIndex = ...) -> QModelIndex:
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
-        parent_key = parent.internalPointer() if parent.isValid() else ""
-        child_key = self.get_child(parent_key, row)
-        self._key_ref.append(child_key)
-        return self.createIndex(row, column, child_key)
+        parent_node = parent.internalPointer() if parent.isValid() else self.root_node
+        child_key = list(parent_node.children)[row]
+        child_node = parent_node.children[child_key]
+        return self.createIndex(row, column, child_node)
 
     @lru_cache
     def parent(self, index: QModelIndex = ...) -> QModelIndex:
         if not index.isValid():
             return QModelIndex()
-        child_key = index.internalPointer()
-        parent_key = SettingsModel.get_parent_key(child_key)
 
-        if parent_key == "":
+        node: SettingsNode = index.internalPointer()
+        parent_node = node.parent
+
+        if parent_node == self.root_node:
             return QModelIndex()
 
-        row = self.get_index_in_parent(index.internalPointer())
-        self._key_ref.append(parent_key)
-        return self.createIndex(row, 0, parent_key)
+        path = node.path
+        parent_index = list(parent_node.children).index(path)
+        return self.createIndex(parent_index, 0, parent_node)
 
     @lru_cache
     def rowCount(self, parent: QModelIndex = ...) -> int:
@@ -154,15 +108,15 @@ class SettingsModel(QAbstractItemModel):
             return 0
 
         if not parent.isValid():
-            parent_key = ""
+            parent_node = self.root_node
         else:
-            parent_key = parent.internalPointer()
-        children = self.get_children(parent_key)
-        return len(children)
+            parent_node = parent.internalPointer()
+        return len(parent_node.children)
 
     @lru_cache
     def columnCount(self, parent: QModelIndex = ...):
         return 2
+
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         """Override from QAbstractItemModel
 
@@ -171,18 +125,42 @@ class SettingsModel(QAbstractItemModel):
         flags = super().flags(index)
 
         if index.column() == 1:
-            return flags
-            # return Qt.ItemFlag.ItemIsEditable | flags
+            # return flags
+            return Qt.ItemFlag.ItemIsEditable | flags
         else:
             return flags
 
 
+# TODO: instead of subclassing a delegate, try to find a way to supply a custom
+#  itemEditorFactory function to the default QStyledItemDelegate
+#  but this may not take care of setting model- and editor-data...
+class Delegate(QStyledItemDelegate):
+    # TODO: implement...
+    def createEditor(self, parent, option, index, /) -> QWidget:
+        return QComboBox(parent)
+
+    # TODO: implement...
+    def setEditorData(self, editor: QComboBox, index, /):
+        editor.insertItems(0, ["1", "2", index.internalPointer().value])
+
+    # TODO: implement...
+    def setModelData(self, editor, model, index, /):
+        pass
 
 
 def main() -> None:
+    settings_data = {
+        "theme/style": "windows11",
+        "theme/colorScheme": Qt.ColorScheme.Light,
+        "windowState": 5,
+        "windowGeometry": 1.6,
+    }
+
     app = QApplication(sys.argv)
     tree_view = QTreeView()
-    model = SettingsModel(app)
+    delegate = Delegate()
+    tree_view.setItemDelegate(delegate)
+    model = SettingsModel(settings_data)
     tree_view.setModel(model)
     tree_view.show()
     app.exec()
