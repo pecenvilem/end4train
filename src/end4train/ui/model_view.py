@@ -149,6 +149,7 @@ class Delegate(QStyledItemDelegate):
 
 
 def main() -> None:
+    # TODO: use SettingsModel in SettingDialog
     settings_data = {
         "theme/style": "windows11",
         "theme/colorScheme": Qt.ColorScheme.Light,
