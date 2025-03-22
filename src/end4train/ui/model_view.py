@@ -7,24 +7,29 @@ import faulthandler
 
 from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject
 from PySide6.QtWidgets import QApplication, QTreeView
-from nuitka.ModuleRegistry import root_modules
 
 
 def drop_duplicates(original: Iterable[str]) -> list[str]:
     return list(dict.fromkeys(original))
+
+
+def split_levels(key: str) -> list[str]:
+    return key.split("/")
+
 
 @dataclass
 class SettingsNode:
     path: str = "/"
     parent: SettingsNode | None = None
     children: dict[str, SettingsNode] = field(default_factory=dict)
-    value: Any = None
 
+    value: Any = None
     def __post_init__(self) -> None:
-        self.stem = self.path.split("/")[-1]
+        self.stem = split_levels(self.path)[-1]
 
 
 class SettingsModel(QAbstractItemModel):
+
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
 
@@ -45,7 +50,7 @@ class SettingsModel(QAbstractItemModel):
     def build_tree(settings: dict) -> SettingsNode:
         root = SettingsNode()
         for key, value in settings.items():
-            levels = SettingsModel.split_levels(key)
+            levels = split_levels(key)
             parent = root
             path = ""
             for i, level in enumerate(levels):
@@ -57,22 +62,18 @@ class SettingsModel(QAbstractItemModel):
         return root
 
     @staticmethod
-    def split_levels(key: str) -> list[str]:
-        return key.split("/")
-
-    @staticmethod
     def get_rank(key: str) -> int:
-        return len(SettingsModel.split_levels(key)) if key != "" else 0
+        return len(split_levels(key)) if key != "" else 0
 
     @staticmethod
     def levels_before_rank(key: str, rank: int) -> str:
         # TODO: add check for negative rank and define custom exception
-        levels = SettingsModel.split_levels(key)
+        levels = split_levels(key)
         return "/".join(levels[0:rank])
 
     @staticmethod
     def get_parent_key(key: str) -> str:
-        levels = SettingsModel.split_levels(key)
+        levels = split_levels(key)
         parent_levels = levels[:-1]
         if not parent_levels:
             return ""
@@ -103,10 +104,10 @@ class SettingsModel(QAbstractItemModel):
     def get_child(self, parent: str, index: int) -> str:
         return self.get_children(parent)[index]
 
+
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
-
 
     def setData(self, index, value, /, role = ...):
         if role == Qt.ItemDataRole.EditRole:
@@ -162,7 +163,6 @@ class SettingsModel(QAbstractItemModel):
     @lru_cache
     def columnCount(self, parent: QModelIndex = ...):
         return 2
-
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         """Override from QAbstractItemModel
 
@@ -175,6 +175,8 @@ class SettingsModel(QAbstractItemModel):
             # return Qt.ItemFlag.ItemIsEditable | flags
         else:
             return flags
+
+
 
 
 def main() -> None:
