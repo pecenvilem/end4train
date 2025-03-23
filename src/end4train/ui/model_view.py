@@ -22,8 +22,8 @@ class SettingsNode:
     path: str = "/"
     parent: SettingsNode | None = None
     children: dict[str, SettingsNode] = field(default_factory=dict)
-
     value: Any = None
+
     def __post_init__(self) -> None:
         self.stem = split_levels(self.path)[-1]
 
@@ -91,13 +91,10 @@ class SettingsModel(QAbstractItemModel):
     def parent(self, index: QModelIndex = ...) -> QModelIndex:
         if not index.isValid():
             return QModelIndex()
-
         node: SettingsNode = index.internalPointer()
         parent_node = node.parent
-
         if parent_node == self.root_node:
             return QModelIndex()
-
         path = node.path
         parent_index = list(parent_node.children).index(path)
         return self.createIndex(parent_index, 0, parent_node)
@@ -106,7 +103,6 @@ class SettingsModel(QAbstractItemModel):
     def rowCount(self, parent: QModelIndex = ...) -> int:
         if parent.column() > 0:
             return 0
-
         if not parent.isValid():
             parent_node = self.root_node
         else:
@@ -118,14 +114,8 @@ class SettingsModel(QAbstractItemModel):
         return 2
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        """Override from QAbstractItemModel
-
-        Return flags of index
-        """
         flags = super().flags(index)
-
         if index.column() == 1:
-            # return flags
             return Qt.ItemFlag.ItemIsEditable | flags
         else:
             return flags
@@ -140,7 +130,7 @@ class Delegate(QStyledItemDelegate):
         return QComboBox(parent)
 
     # TODO: implement...
-    def setEditorData(self, editor: QComboBox, index, /):
+    def setEditorData(self, editor, index, /):
         editor.insertItems(0, ["1", "2", index.internalPointer().value])
 
     # TODO: implement...
