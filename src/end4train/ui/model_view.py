@@ -1,12 +1,15 @@
 from __future__ import annotations
 import sys
 from dataclasses import dataclass, field
+from enum import Enum
 from functools import lru_cache
-from typing import Iterable, Any
+from typing import Iterable, Any, Type, Annotated, Callable
 import faulthandler
 
 from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject
-from PySide6.QtWidgets import QApplication, QTreeView, QStyledItemDelegate, QWidget, QComboBox
+from PySide6.QtWidgets import QApplication, QTreeView, QStyledItemDelegate, QWidget, QComboBox, QStyleFactory, \
+    QDoubleSpinBox, QLineEdit, QSpinBox, QCheckBox, QStyleOptionProgressBar
+from pydantic import BaseModel, Field, AfterValidator
 
 
 def drop_duplicates(original: Iterable[str]) -> list[str]:
@@ -15,6 +18,78 @@ def drop_duplicates(original: Iterable[str]) -> list[str]:
 
 def split_levels(key: str) -> list[str]:
     return key.split("/")
+
+
+class TestEnum(Enum):
+    VALUE_ONE = 1
+    VALUE_TWO = "2"
+    VALUE_THREE = ["t", "h", "r", "e", "e"]
+
+@dataclass
+class SettingsKeyDetail:
+    key: str
+    presentation_name: str
+
+
+class Key(Enum):
+    THEME = SettingsKeyDetail("theme", "Theme")
+    STYLE = SettingsKeyDetail("style", "Style")
+    COLOR_SCHEME = SettingsKeyDetail("colorScheme", "Color Scheme")
+
+    @classmethod
+    @lru_cache
+    def get_presentation(cls, key: str) -> str | None:
+        for item in cls:
+            if item.value.key == key:
+                return item.value.presentation_name
+
+def validate_style_string(style_string: str, style_factory:Callable[[], list[str]] = QStyleFactory.keys) -> str:
+    allowed = style_factory()
+    if style_string not in allowed:
+        raise ValueError(f"Can't create QStyle for factory string: {style_string}")
+    return style_string
+
+class PressureGaugeWidget(BaseModel):
+    min_value: float = Annotated[0.0, Field(alias="minValue", title="Minimum value")]
+    max_value: float = Annotated[12.0, Field(alias="maxValue", title="Maximum value")]
+    min_angle: float = Annotated[10.0, Field(alias="minAngle", title="Minimum angle")]
+    max_angle: float = Annotated[350.0, Field(alias="maxAngle", title="Maximum angle")]
+    major_tick_count: int = Annotated[6, Field(alias="majorTickCount", title="Major ticks over the gauge range")]
+    minor_tick_count: int = Annotated[5, Field(alias="minorTickCount", title="Minor ticks between two major ticks")]
+    minor_tick_labels: bool = Annotated[False, Field(alias="minorTickLabels", title="Labels on minor ticks")]
+
+def pressure_gauge_widget_factory(
+        min_value: float, max_value: float, max_angle: float, min_angle: float,
+        major_tick_count: int, minor_tick_count: int, minor_tick_labels: bool
+) -> PressureGaugeWidget:
+    return PressureGaugeWidget(
+        min_value=min_value, max_value=max_value, min_angle=min_angle, max_angle=max_angle,
+        major_tick_count=major_tick_count, minor_tick_count=minor_tick_count, minor_tick_labels=minor_tick_labels
+    )
+
+class ThemeSection(BaseModel):
+    style: str = Annotated["windows11", AfterValidator(validate_style_string)]
+    color_scheme: Qt.ColorScheme = Annotated[Qt.ColorScheme.Unknown, Field(alias="colorScheme", title="Color Scheme")]
+
+class PressureWidgetSection(BaseModel):
+    main_reservoir: PressureGaugeWidget = Annotated[
+        pressure_gauge_widget_factory(0.0, 12.0, 10, 350, 6, 5, False),
+        Field(alias="mainReservoir", title="Main reservoir")
+    ]
+
+class WidgetSection(BaseModel):
+    pressure_widgets: PressureWidgetSection = Annotated[
+        PressureWidgetSection(),
+        Field(alias="pressureWidgets", title="Pressure gauges")
+    ]
+
+class Settings(BaseModel):
+    autostart: bool = Annotated[False, Field(title="Autostart")]
+    theme: ThemeSection = Annotated[ThemeSection(), Field(title="Theme")]
+    widget: WidgetSection = Annotated[WidgetSection(), Field(title="Widgets")]
+
+# TODO: try to init an instance of Settings and serialize it into a JSON file
+# TODO: create JSON schema for Settings
 
 
 @dataclass
@@ -29,10 +104,15 @@ class SettingsNode:
 
 
 class SettingsModel(QAbstractItemModel):
+
+    # TODO: create a function, which builds a tree of SettingsNodes from Settings object
+
     def __init__(self, settings_data: dict, parent: QObject | None = None):
         super().__init__(parent)
         self._headers = ("key", "value")
         self.root_node = SettingsModel.build_tree(settings_data)
+        self.settings = Settings()
+        pass
 
     @staticmethod
     def build_tree(settings: dict) -> SettingsNode:
@@ -55,6 +135,9 @@ class SettingsModel(QAbstractItemModel):
         node: SettingsNode = index.internalPointer()
         if role == Qt.ItemDataRole.DisplayRole:
             if index.column() == 0:
+                presentation = Key.get_presentation(node.stem)
+                if presentation is not None:
+                    return presentation
                 return node.stem
             elif index.column() == 1:
                 return node.value
@@ -125,13 +208,48 @@ class SettingsModel(QAbstractItemModel):
 #  itemEditorFactory function to the default QStyledItemDelegate
 #  but this may not take care of setting model- and editor-data...
 class Delegate(QStyledItemDelegate):
+
+    BOUNDS = {
+        "widget/pressureGauge/minLineAngle": 10,
+        "widget/pressureGauge/maxLineAngle": 350,
+        "widget/pressureGauge/majorTickCount": 6,
+        "widget/pressureGauge/minorTickCount": 5,
+        "widget/pressureGauge/minorTickLabels": False,
+    }
+
+    @staticmethod
+    def get_value_list_override(key: Key) -> list[str] | None:
+        mapping = {
+            Key.STYLE: lambda: list(style.capitalize() for style in QStyleFactory.keys())
+        }
+        if key not in mapping:
+            return None
+        return mapping[key]()
+
+
     # TODO: implement...
     def createEditor(self, parent, option, index, /) -> QWidget:
-        return QComboBox(parent)
+        settings_node: SettingsNode = index.internalPointer()
+        if isinstance(settings_node.value, Enum):
+            combobox = QComboBox(parent)
+            enum_class: Type[Enum] = type(settings_node.value)
+            combobox.addItems([item.name for item in enum_class])
+            return combobox
+        if isinstance(settings_node.value, float):
+            return QDoubleSpinBox(parent)
+        # TODO: implement CheckBox for boolean values (requires reimplementing Delegate.paint)
+        if isinstance(settings_node.value, bool):
+            combobox = QComboBox(parent)
+            combobox.addItems(["True", "False"])
+            return combobox
+        if isinstance(settings_node.value, int):
+            return QSpinBox(parent)
+        return QLineEdit(parent)
 
     # TODO: implement...
     def setEditorData(self, editor, index, /):
-        editor.insertItems(0, ["1", "2", index.internalPointer().value])
+        pass
+        # editor.insertItems(0, ["1", "2", index.internalPointer().value])
 
     # TODO: implement...
     def setModelData(self, editor, model, index, /):
@@ -140,13 +258,19 @@ class Delegate(QStyledItemDelegate):
 
 def main() -> None:
     # TODO: use SettingsModel in SettingDialog
+
     settings_data = {
+        "autostart": False, 
         "theme/style": "windows11",
         "theme/colorScheme": Qt.ColorScheme.Light,
-        "windowState": 5,
-        "windowGeometry": 1.6,
+        "widget/pressureGauge/minValue": 0.0,
+        "widget/pressureGauge/maxValue": 12.0,
+        "widget/pressureGauge/minLineAngle": 10,
+        "widget/pressureGauge/maxLineAngle": 350,
+        "widget/pressureGauge/majorTickCount": 6,
+        "widget/pressureGauge/minorTickCount": 5,
+        "widget/pressureGauge/minorTickLabels": False,
     }
-
     app = QApplication(sys.argv)
     tree_view = QTreeView()
     delegate = Delegate()

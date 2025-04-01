@@ -1,7 +1,7 @@
 from typing import Callable
 
 from PySide6.QtCore import QUrl, QSettings, QEvent
-from PySide6.QtGui import QCloseEvent
+from PySide6.QtGui import QCloseEvent, Qt
 from PySide6.QtWidgets import QMainWindow, QAbstractItemView
 
 from end4train.app.traces_model import TracesModel
@@ -63,10 +63,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         geometry = self.settings.value(f"{SettingsKey.GEOMETRY_STATE}/{owner}")
         self.restoreState(state, SETTINGS_VERSION_NUMBER)
         self.restoreGeometry(geometry)
+        self.settings.value("test/int", type=int)
+        self.settings.value("test/float", type=float)
+        self.settings.value("test/str", type=str)
+        self.settings.value("test/enum")
+        self.settings.value("test/bool", type=bool)
 
     def save_layout(self, owner: SaveOwner = SaveOwner.SHUTDOWN_AUTOSAVE) -> None:
         self.settings.setValue(f"{SettingsKey.WINDOW_STATE}/{owner}", self.saveState(SETTINGS_VERSION_NUMBER))
         self.settings.setValue(f"{SettingsKey.GEOMETRY_STATE}/{owner}", self.saveGeometry())
+        self.settings.setValue("test/int", 5)
+        self.settings.setValue("test/float", 7.2)
+        self.settings.setValue("test/str", "String")
+        self.settings.setValue("test/enum", Qt.ColorScheme.Light)
+        self.settings.setValue("test/bool", False)
 
     def toggle_listener(self):
         self.toggle_listener_callback(
