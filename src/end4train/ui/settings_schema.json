@@ -1,0 +1,144 @@
+{
+  "$defs": {
+    "ColorScheme": {
+      "enum": [
+        0,
+        1,
+        2
+      ],
+      "title": "ColorScheme",
+      "type": "integer"
+    },
+    "PressureGaugeWidget": {
+      "properties": {
+        "minValue": {
+          "default": 0.0,
+          "title": "Minimum value",
+          "type": "number"
+        },
+        "maxValue": {
+          "default": 12.0,
+          "title": "Maximum value",
+          "type": "number"
+        },
+        "minAngle": {
+          "default": 10.0,
+          "title": "Minimum angle",
+          "type": "number"
+        },
+        "maxAngle": {
+          "default": 350.0,
+          "title": "Maximum angle",
+          "type": "number"
+        },
+        "majorTickCount": {
+          "default": 6,
+          "title": "Major ticks over the gauge range",
+          "type": "integer"
+        },
+        "minorTickCount": {
+          "default": 5,
+          "title": "Minor ticks between two major ticks",
+          "type": "integer"
+        },
+        "minorTickLabels": {
+          "default": false,
+          "title": "Labels on minor ticks",
+          "type": "boolean"
+        }
+      },
+      "title": "PressureGaugeWidget",
+      "type": "object"
+    },
+    "PressureWidgetSection": {
+      "properties": {
+        "mainReservoir": {
+          "$ref": "#/$defs/PressureGaugeWidget",
+          "default": {
+            "minValue": 0.0,
+            "maxValue": 12.0,
+            "minAngle": 10.0,
+            "maxAngle": 350.0,
+            "majorTickCount": 6,
+            "minorTickCount": 5,
+            "minorTickLabels": false
+          },
+          "title": "Main reservoir"
+        }
+      },
+      "title": "PressureWidgetSection",
+      "type": "object"
+    },
+    "ThemeSection": {
+      "properties": {
+        "style": {
+          "default": "windows11",
+          "title": "Style",
+          "type": "string"
+        },
+        "colorScheme": {
+          "$ref": "#/$defs/ColorScheme",
+          "default": 0,
+          "title": "Color Scheme"
+        }
+      },
+      "title": "ThemeSection",
+      "type": "object"
+    },
+    "WidgetSection": {
+      "properties": {
+        "pressureWidgets": {
+          "$ref": "#/$defs/PressureWidgetSection",
+          "default": {
+            "mainReservoir": {
+              "majorTickCount": 6,
+              "maxAngle": 350.0,
+              "maxValue": 12.0,
+              "minAngle": 10.0,
+              "minValue": 0.0,
+              "minorTickCount": 5,
+              "minorTickLabels": false
+            }
+          },
+          "title": "Pressure gauges"
+        }
+      },
+      "title": "WidgetSection",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "autostart": {
+      "default": false,
+      "title": "Autostart",
+      "type": "boolean"
+    },
+    "theme": {
+      "$ref": "#/$defs/ThemeSection",
+      "default": {
+        "style": "windows11",
+        "colorScheme": 0
+      },
+      "title": "Theme"
+    },
+    "widget": {
+      "$ref": "#/$defs/WidgetSection",
+      "default": {
+        "pressureWidgets": {
+          "mainReservoir": {
+            "majorTickCount": 6,
+            "maxAngle": 350.0,
+            "maxValue": 12.0,
+            "minAngle": 10.0,
+            "minValue": 0.0,
+            "minorTickCount": 5,
+            "minorTickLabels": false
+          }
+        }
+      },
+      "title": "Widgets"
+    }
+  },
+  "title": "Settings",
+  "type": "object"
+}

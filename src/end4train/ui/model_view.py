@@ -1,5 +1,6 @@
 from __future__ import annotations
 import sys
+from collections import namedtuple
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import lru_cache
@@ -50,13 +51,13 @@ def validate_style_string(style_string: str, style_factory:Callable[[], list[str
     return style_string
 
 class PressureGaugeWidget(BaseModel):
-    min_value: float = Annotated[0.0, Field(alias="minValue", title="Minimum value")]
-    max_value: float = Annotated[12.0, Field(alias="maxValue", title="Maximum value")]
-    min_angle: float = Annotated[10.0, Field(alias="minAngle", title="Minimum angle")]
-    max_angle: float = Annotated[350.0, Field(alias="maxAngle", title="Maximum angle")]
-    major_tick_count: int = Annotated[6, Field(alias="majorTickCount", title="Major ticks over the gauge range")]
-    minor_tick_count: int = Annotated[5, Field(alias="minorTickCount", title="Minor ticks between two major ticks")]
-    minor_tick_labels: bool = Annotated[False, Field(alias="minorTickLabels", title="Labels on minor ticks")]
+    min_value: Annotated[float, Field(alias="minValue", title="Minimum value")] = 0.0
+    max_value: Annotated[float, Field(alias="maxValue", title="Maximum value")] = 12.0
+    min_angle: Annotated[float, Field(alias="minAngle", title="Minimum angle")] = 10.0
+    max_angle: Annotated[float, Field(alias="maxAngle", title="Maximum angle")] = 350.0
+    major_tick_count: Annotated[int, Field(alias="majorTickCount", title="Major ticks over the gauge range")] = 6
+    minor_tick_count: Annotated[int, Field(alias="minorTickCount", title="Minor ticks between two major ticks")] = 5
+    minor_tick_labels: Annotated[bool, Field(alias="minorTickLabels", title="Labels on minor ticks")] = False
 
 def pressure_gauge_widget_factory(
         min_value: float, max_value: float, max_angle: float, min_angle: float,
@@ -68,35 +69,32 @@ def pressure_gauge_widget_factory(
     )
 
 class ThemeSection(BaseModel):
-    style: str = Annotated["windows11", AfterValidator(validate_style_string)]
-    color_scheme: Qt.ColorScheme = Annotated[Qt.ColorScheme.Unknown, Field(alias="colorScheme", title="Color Scheme")]
+    style: Annotated[str, AfterValidator(validate_style_string)] = "windows11"
+    color_scheme: Annotated[Qt.ColorScheme, Field(alias="colorScheme", title="Color Scheme")] = Qt.ColorScheme.Unknown
 
 class PressureWidgetSection(BaseModel):
-    main_reservoir: PressureGaugeWidget = Annotated[
-        pressure_gauge_widget_factory(0.0, 12.0, 10, 350, 6, 5, False),
-        Field(alias="mainReservoir", title="Main reservoir")
-    ]
+    main_reservoir: Annotated[
+        PressureGaugeWidget, Field(alias="mainReservoir", title="Main reservoir")
+    ] = pressure_gauge_widget_factory(0.0, 12.0, 10, 350, 6, 5, False)
 
 class WidgetSection(BaseModel):
-    pressure_widgets: PressureWidgetSection = Annotated[
-        PressureWidgetSection(),
-        Field(alias="pressureWidgets", title="Pressure gauges")
-    ]
+    pressure_widgets: Annotated[
+        PressureWidgetSection, Field(alias="pressureWidgets", title="Pressure gauges")
+    ] = PressureWidgetSection()
 
 class Settings(BaseModel):
-    autostart: bool = Annotated[False, Field(title="Autostart")]
-    theme: ThemeSection = Annotated[ThemeSection(), Field(title="Theme")]
-    widget: WidgetSection = Annotated[WidgetSection(), Field(title="Widgets")]
+    autostart: Annotated[bool, Field(title="Autostart")] = False
+    theme: Annotated[ThemeSection, Field(title="Theme")] = ThemeSection()
+    widget: Annotated[WidgetSection, Field(title="Widgets")] = WidgetSection()
 
-# TODO: try to init an instance of Settings and serialize it into a JSON file
-# TODO: create JSON schema for Settings
 
+TreeNode = namedtuple("TreeNode", ["parent", "node"])
 
 @dataclass
-class SettingsNode:
+class SettingsTreeNode:
     path: str = "/"
-    parent: SettingsNode | None = None
-    children: dict[str, SettingsNode] = field(default_factory=dict)
+    parent: SettingsTreeNode | None = None
+    children: dict[str, SettingsTreeNode] = field(default_factory=dict)
     value: Any = None
 
     def __post_init__(self) -> None:
@@ -112,11 +110,14 @@ class SettingsModel(QAbstractItemModel):
         self._headers = ("key", "value")
         self.root_node = SettingsModel.build_tree(settings_data)
         self.settings = Settings()
+        self.parents = dict()
+        for key, field_info in Settings.model_fields.items():
+            print(key, field_info)
         pass
 
     @staticmethod
-    def build_tree(settings: dict) -> SettingsNode:
-        root = SettingsNode()
+    def build_tree(settings: dict) -> SettingsTreeNode:
+        root = SettingsTreeNode()
         for key, value in settings.items():
             levels = split_levels(key)
             parent = root
@@ -124,7 +125,7 @@ class SettingsModel(QAbstractItemModel):
             for i, level in enumerate(levels):
                 path = f"{path}/{level}"
                 if path not in parent.children:
-                    node = SettingsNode(path, parent, {}, value if i+1 == len(levels) else None)
+                    node = SettingsTreeNode(path, parent, {}, value if i + 1 == len(levels) else None)
                     parent.children[path] = node
                 parent = parent.children[path]
         return root
@@ -132,7 +133,7 @@ class SettingsModel(QAbstractItemModel):
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
-        node: SettingsNode = index.internalPointer()
+        node: SettingsTreeNode = index.internalPointer()
         if role == Qt.ItemDataRole.DisplayRole:
             if index.column() == 0:
                 presentation = Key.get_presentation(node.stem)
@@ -148,7 +149,7 @@ class SettingsModel(QAbstractItemModel):
     def setData(self, index, value, /, role = ...):
         if role == Qt.ItemDataRole.EditRole:
             if index.column() == 1:
-                node: SettingsNode = index.internalPointer()
+                node: SettingsTreeNode = index.internalPointer()
                 node.value = str(value)
                 self.dataChanged.emit(index, index, [Qt.ItemDataRole.EditRole])
                 return True
@@ -174,7 +175,7 @@ class SettingsModel(QAbstractItemModel):
     def parent(self, index: QModelIndex = ...) -> QModelIndex:
         if not index.isValid():
             return QModelIndex()
-        node: SettingsNode = index.internalPointer()
+        node: SettingsTreeNode = index.internalPointer()
         parent_node = node.parent
         if parent_node == self.root_node:
             return QModelIndex()
@@ -209,27 +210,9 @@ class SettingsModel(QAbstractItemModel):
 #  but this may not take care of setting model- and editor-data...
 class Delegate(QStyledItemDelegate):
 
-    BOUNDS = {
-        "widget/pressureGauge/minLineAngle": 10,
-        "widget/pressureGauge/maxLineAngle": 350,
-        "widget/pressureGauge/majorTickCount": 6,
-        "widget/pressureGauge/minorTickCount": 5,
-        "widget/pressureGauge/minorTickLabels": False,
-    }
-
-    @staticmethod
-    def get_value_list_override(key: Key) -> list[str] | None:
-        mapping = {
-            Key.STYLE: lambda: list(style.capitalize() for style in QStyleFactory.keys())
-        }
-        if key not in mapping:
-            return None
-        return mapping[key]()
-
-
     # TODO: implement...
     def createEditor(self, parent, option, index, /) -> QWidget:
-        settings_node: SettingsNode = index.internalPointer()
+        settings_node: SettingsTreeNode = index.internalPointer()
         if isinstance(settings_node.value, Enum):
             combobox = QComboBox(parent)
             enum_class: Type[Enum] = type(settings_node.value)

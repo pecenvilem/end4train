@@ -1,0 +1,20 @@
+{
+  "autostart": false,
+  "theme": {
+    "style": "windows11",
+    "color_scheme": 0
+  },
+  "widget": {
+    "pressure_widgets": {
+      "main_reservoir": {
+        "min_value": 0.0,
+        "max_value": 12.0,
+        "min_angle": 10.0,
+        "max_angle": 350.0,
+        "major_tick_count": 6,
+        "minor_tick_count": 5,
+        "minor_tick_labels": false
+      }
+    }
+  }
+}
