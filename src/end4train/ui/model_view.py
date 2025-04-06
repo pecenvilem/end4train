@@ -1,48 +1,17 @@
 from __future__ import annotations
 import sys
-from collections import namedtuple
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
-from typing import Iterable, Any, Type, Annotated, Callable
+from typing import Any, Type, Annotated, Callable
 import faulthandler
 
 from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject
 from PySide6.QtWidgets import QApplication, QTreeView, QStyledItemDelegate, QWidget, QComboBox, QStyleFactory, \
-    QDoubleSpinBox, QLineEdit, QSpinBox, QCheckBox, QStyleOptionProgressBar
+    QDoubleSpinBox, QLineEdit, QSpinBox, QCheckBox
 from pydantic import BaseModel, Field, AfterValidator
+from pydantic.fields import FieldInfo
 
-
-def drop_duplicates(original: Iterable[str]) -> list[str]:
-    return list(dict.fromkeys(original))
-
-
-def split_levels(key: str) -> list[str]:
-    return key.split("/")
-
-
-class TestEnum(Enum):
-    VALUE_ONE = 1
-    VALUE_TWO = "2"
-    VALUE_THREE = ["t", "h", "r", "e", "e"]
-
-@dataclass
-class SettingsKeyDetail:
-    key: str
-    presentation_name: str
-
-
-class Key(Enum):
-    THEME = SettingsKeyDetail("theme", "Theme")
-    STYLE = SettingsKeyDetail("style", "Style")
-    COLOR_SCHEME = SettingsKeyDetail("colorScheme", "Color Scheme")
-
-    @classmethod
-    @lru_cache
-    def get_presentation(cls, key: str) -> str | None:
-        for item in cls:
-            if item.value.key == key:
-                return item.value.presentation_name
 
 def validate_style_string(style_string: str, style_factory:Callable[[], list[str]] = QStyleFactory.keys) -> str:
     allowed = style_factory()
@@ -69,7 +38,7 @@ def pressure_gauge_widget_factory(
     )
 
 class ThemeSection(BaseModel):
-    style: Annotated[str, AfterValidator(validate_style_string)] = "windows11"
+    style: Annotated[str, Field(title="Style"), AfterValidator(validate_style_string)] = "windows11"
     color_scheme: Annotated[Qt.ColorScheme, Field(alias="colorScheme", title="Color Scheme")] = Qt.ColorScheme.Unknown
 
 class PressureWidgetSection(BaseModel):
@@ -88,71 +57,75 @@ class Settings(BaseModel):
     widget: Annotated[WidgetSection, Field(title="Widgets")] = WidgetSection()
 
 
-TreeNode = namedtuple("TreeNode", ["parent", "node"])
-
-@dataclass
-class SettingsTreeNode:
-    path: str = "/"
-    parent: SettingsTreeNode | None = None
-    children: dict[str, SettingsTreeNode] = field(default_factory=dict)
-    value: Any = None
-
-    def __post_init__(self) -> None:
-        self.stem = split_levels(self.path)[-1]
-
+type SettingsPath = tuple[str, ...]
 
 class SettingsModel(QAbstractItemModel):
 
-    # TODO: create a function, which builds a tree of SettingsNodes from Settings object
+    @dataclass
+    class Node:
+        path: SettingsPath
+        parent: SettingsModel.Node | None
+        children: list[SettingsModel.Node]
 
-    def __init__(self, settings_data: dict, parent: QObject | None = None):
+    def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
         self._headers = ("key", "value")
-        self.root_node = SettingsModel.build_tree(settings_data)
         self.settings = Settings()
-        self.parents = dict()
-        for key, field_info in Settings.model_fields.items():
-            print(key, field_info)
+        self.root_node = self.build_tree()
         pass
 
-    @staticmethod
-    def build_tree(settings: dict) -> SettingsTreeNode:
-        root = SettingsTreeNode()
-        for key, value in settings.items():
-            levels = split_levels(key)
-            parent = root
-            path = ""
-            for i, level in enumerate(levels):
-                path = f"{path}/{level}"
-                if path not in parent.children:
-                    node = SettingsTreeNode(path, parent, {}, value if i + 1 == len(levels) else None)
-                    parent.children[path] = node
-                parent = parent.children[path]
+    def build_tree(self) -> SettingsModel.Node:
+        root = SettingsModel.Node(path=tuple(), parent=None, children=list())
+        remaining_nodes = [root]
+        while remaining_nodes:
+            current_node = remaining_nodes.pop()
+            value = self.get_field_value(current_node.path)
+            if not isinstance(value, BaseModel):
+                continue
+            value_model = type(value)
+            current_node.children = list(
+                SettingsModel.Node(current_node.path + (stem, ), current_node, list())
+                for stem in value_model.model_fields.keys()
+            )
+            remaining_nodes.extend(current_node.children)
         return root
+
+    def get_field_value(self, path: SettingsPath) -> Any:
+        current_object = self.settings
+        try:
+            for step in path:
+                current_object = getattr(current_object, step)
+        except AttributeError as e:
+            raise ValueError(f"Invalid settings path: {path}") from e
+        return current_object
+
+    def get_field_info(self, path: SettingsPath) -> FieldInfo:
+        parent: type[BaseModel] = type(self.get_field_value(path[:-1]))
+        try:
+            return parent.model_fields[path[-1]]
+        except AttributeError as e:
+            raise
+        except KeyError as e:
+            raise ValueError(f"Invalid settings path: {path}") from e
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
-        node: SettingsTreeNode = index.internalPointer()
+        node: SettingsModel.Node = index.internalPointer()
         if role == Qt.ItemDataRole.DisplayRole:
             if index.column() == 0:
-                presentation = Key.get_presentation(node.stem)
-                if presentation is not None:
-                    return presentation
-                return node.stem
+                info = self.get_field_info(node.path)
+                return info.title
             elif index.column() == 1:
-                return node.value
+                return self.get_field_value(node.path)
         elif role == Qt.ItemDataRole.EditRole:
             if index.column() == 1:
-                return node.value
+                return self.get_field_value(node.path)
 
     def setData(self, index, value, /, role = ...):
         if role == Qt.ItemDataRole.EditRole:
-            if index.column() == 1:
-                node: SettingsTreeNode = index.internalPointer()
-                node.value = str(value)
-                self.dataChanged.emit(index, index, [Qt.ItemDataRole.EditRole])
-                return True
+            # TODO: implement
+            return False
         return False
 
     @lru_cache
@@ -167,21 +140,17 @@ class SettingsModel(QAbstractItemModel):
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
         parent_node = parent.internalPointer() if parent.isValid() else self.root_node
-        child_key = list(parent_node.children)[row]
-        child_node = parent_node.children[child_key]
-        return self.createIndex(row, column, child_node)
+        return self.createIndex(row, column, parent_node.children[row])
 
     @lru_cache
     def parent(self, index: QModelIndex = ...) -> QModelIndex:
         if not index.isValid():
             return QModelIndex()
-        node: SettingsTreeNode = index.internalPointer()
-        parent_node = node.parent
-        if parent_node == self.root_node:
+        current_index_node: SettingsModel.Node = index.internalPointer()
+        if current_index_node.parent == self.root_node:
             return QModelIndex()
-        path = node.path
-        parent_index = list(parent_node.children).index(path)
-        return self.createIndex(parent_index, 0, parent_node)
+        parent_row = current_index_node.parent.children.index(current_index_node)
+        return self.createIndex(parent_row, 0, current_index_node.parent)
 
     @lru_cache
     def rowCount(self, parent: QModelIndex = ...) -> int:
@@ -199,7 +168,7 @@ class SettingsModel(QAbstractItemModel):
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         flags = super().flags(index)
-        if index.column() == 1:
+        if index.column() == 1 and not index.internalPointer().children:
             return Qt.ItemFlag.ItemIsEditable | flags
         else:
             return flags
@@ -212,21 +181,21 @@ class Delegate(QStyledItemDelegate):
 
     # TODO: implement...
     def createEditor(self, parent, option, index, /) -> QWidget:
-        settings_node: SettingsTreeNode = index.internalPointer()
-        if isinstance(settings_node.value, Enum):
-            combobox = QComboBox(parent)
-            enum_class: Type[Enum] = type(settings_node.value)
-            combobox.addItems([item.name for item in enum_class])
-            return combobox
-        if isinstance(settings_node.value, float):
-            return QDoubleSpinBox(parent)
-        # TODO: implement CheckBox for boolean values (requires reimplementing Delegate.paint)
-        if isinstance(settings_node.value, bool):
-            combobox = QComboBox(parent)
-            combobox.addItems(["True", "False"])
-            return combobox
-        if isinstance(settings_node.value, int):
-            return QSpinBox(parent)
+        # settings_node = index.internalPointer()
+        # if isinstance(settings_node.value, Enum):
+        #     combobox = QComboBox(parent)
+        #     enum_class: Type[Enum] = type(settings_node.value)
+        #     combobox.addItems([item.name for item in enum_class])
+        #     return combobox
+        # if isinstance(settings_node.value, float):
+        #     return QDoubleSpinBox(parent)
+        # # TODO: implement CheckBox for boolean values (requires reimplementing Delegate.paint)
+        # if isinstance(settings_node.value, bool):
+        #     combobox = QComboBox(parent)
+        #     combobox.addItems(["True", "False"])
+        #     return combobox
+        # if isinstance(settings_node.value, int):
+        #     return QSpinBox(parent)
         return QLineEdit(parent)
 
     # TODO: implement...
@@ -258,7 +227,7 @@ def main() -> None:
     tree_view = QTreeView()
     delegate = Delegate()
     tree_view.setItemDelegate(delegate)
-    model = SettingsModel(settings_data)
+    model = SettingsModel()
     tree_view.setModel(model)
     tree_view.show()
     app.exec()
