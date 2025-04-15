@@ -222,7 +222,6 @@ class Delegate(QStyledItemDelegate):
         settings_node: SettingsModel.Node = index.internalPointer()
 
         if settings_node.field_info.annotation == bool:
-            # TODO: implement CheckBox for boolean values (requires reimplementing Delegate.paint)
             widget = QComboBox(parent, editable=False)
             widget.addItem(self.tr("True"), True)
             widget.addItem(self.tr("False"), False)
@@ -251,7 +250,7 @@ class Delegate(QStyledItemDelegate):
         # TODO: add visualization using a QCheckBox for boolean values
         super().paint(painter, option, index)
 
-    # TODO: implement...
+    # TODO: validate...
     def setEditorData(self, editor, index, /):
         if isinstance(editor, QSpinBox):
             editor.setValue(index.data(Qt.ItemDataRole.EditRole))
