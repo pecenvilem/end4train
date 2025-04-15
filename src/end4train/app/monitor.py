@@ -97,9 +97,9 @@ class Gui(QApplication):
         self.setStyle("windows11")
 
     def edit_theme(self):
-        styles = [style.lower() for style in QStyleFactory.keys()]
+        # styles = [style.lower() for style in QStyleFactory.keys()]
 
-        dialog = SettingsDialog(self.main_window, styles)
+        dialog = SettingsDialog(self.main_window)
         dialog.accepted.connect(self.store_theme)
         dialog.setModal(True)
         dialog.open()

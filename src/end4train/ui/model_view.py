@@ -1,13 +1,11 @@
 from __future__ import annotations
-import sys
 from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
 from typing import Any, Type, Annotated, Callable
-import faulthandler
 
 from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject
-from PySide6.QtWidgets import QApplication, QTreeView, QStyledItemDelegate, QWidget, QComboBox, QStyleFactory, \
+from PySide6.QtWidgets import QStyledItemDelegate, QWidget, QComboBox, QStyleFactory, \
     QDoubleSpinBox, QLineEdit, QSpinBox, QCheckBox
 from pydantic import BaseModel, Field, AfterValidator
 from pydantic.fields import FieldInfo
@@ -66,6 +64,8 @@ class SettingsModel(QAbstractItemModel):
         path: SettingsPath
         parent: SettingsModel.Node | None
         children: list[SettingsModel.Node]
+        value: Any
+        type_info: FieldInfo | None
 
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
@@ -75,7 +75,9 @@ class SettingsModel(QAbstractItemModel):
         pass
 
     def build_tree(self) -> SettingsModel.Node:
-        root = SettingsModel.Node(path=tuple(), parent=None, children=list())
+        root = SettingsModel.Node(
+            path=tuple(), parent=None, children=list(), value=self.settings, type_info=None
+        )
         remaining_nodes = [root]
         while remaining_nodes:
             current_node = remaining_nodes.pop()
@@ -84,7 +86,11 @@ class SettingsModel(QAbstractItemModel):
                 continue
             value_model = type(value)
             current_node.children = list(
-                SettingsModel.Node(current_node.path + (stem, ), current_node, list())
+                SettingsModel.Node(
+                    path=current_node.path + (stem, ), parent=current_node, children=list(),
+                    value=self.get_field_value(current_node.path + (stem, )),
+                    type_info=self.get_field_info(current_node.path + (stem, ))
+                )
                 for stem in value_model.model_fields.keys()
             )
             remaining_nodes.extend(current_node.children)
@@ -98,6 +104,13 @@ class SettingsModel(QAbstractItemModel):
         except AttributeError as e:
             raise ValueError(f"Invalid settings path: {path}") from e
         return current_object
+
+    def set_field_value(self, path: SettingsPath, value: Any) -> None:
+        parent = self.get_field_value(path[:-1])
+        try:
+            setattr(parent, path[-1], value)
+        except AttributeError as e:
+            raise ValueError(f"Invalid settings path: {path}") from e
 
     def get_field_info(self, path: SettingsPath) -> FieldInfo:
         parent: type[BaseModel] = type(self.get_field_value(path[:-1]))
@@ -123,9 +136,14 @@ class SettingsModel(QAbstractItemModel):
                 return self.get_field_value(node.path)
 
     def setData(self, index, value, /, role = ...):
+        # TODO: validate
         if role == Qt.ItemDataRole.EditRole:
-            # TODO: implement
-            return False
+            if index.column() != 1:
+                return False
+            node = index.internalPointer()
+            self.set_field_value(node.path, value)
+            self.dataChanged.emit(index, index, [Qt.ItemDataRole.EditRole])
+            return True
         return False
 
     @lru_cache
@@ -181,22 +199,18 @@ class Delegate(QStyledItemDelegate):
 
     # TODO: implement...
     def createEditor(self, parent, option, index, /) -> QWidget:
-        # settings_node = index.internalPointer()
-        # if isinstance(settings_node.value, Enum):
-        #     combobox = QComboBox(parent)
-        #     enum_class: Type[Enum] = type(settings_node.value)
-        #     combobox.addItems([item.name for item in enum_class])
-        #     return combobox
-        # if isinstance(settings_node.value, float):
-        #     return QDoubleSpinBox(parent)
-        # # TODO: implement CheckBox for boolean values (requires reimplementing Delegate.paint)
-        # if isinstance(settings_node.value, bool):
-        #     combobox = QComboBox(parent)
-        #     combobox.addItems(["True", "False"])
-        #     return combobox
-        # if isinstance(settings_node.value, int):
-        #     return QSpinBox(parent)
-        return QLineEdit(parent)
+        widget_map: dict[type, Type[QWidget]] = {
+            bool: QCheckBox,
+            int: QSpinBox,
+            float: QDoubleSpinBox,
+            Enum: QComboBox
+        }
+        settings_node: SettingsModel.Node = index.internalPointer()
+        widget_class = widget_map.get(settings_node.type_info.annotation, QLineEdit)
+
+        # TODO: implement CheckBox for boolean values (requires reimplementing Delegate.paint)
+
+        return widget_class(parent)
 
     # TODO: implement...
     def setEditorData(self, editor, index, /):
@@ -206,33 +220,3 @@ class Delegate(QStyledItemDelegate):
     # TODO: implement...
     def setModelData(self, editor, model, index, /):
         pass
-
-
-def main() -> None:
-    # TODO: use SettingsModel in SettingDialog
-
-    settings_data = {
-        "autostart": False, 
-        "theme/style": "windows11",
-        "theme/colorScheme": Qt.ColorScheme.Light,
-        "widget/pressureGauge/minValue": 0.0,
-        "widget/pressureGauge/maxValue": 12.0,
-        "widget/pressureGauge/minLineAngle": 10,
-        "widget/pressureGauge/maxLineAngle": 350,
-        "widget/pressureGauge/majorTickCount": 6,
-        "widget/pressureGauge/minorTickCount": 5,
-        "widget/pressureGauge/minorTickLabels": False,
-    }
-    app = QApplication(sys.argv)
-    tree_view = QTreeView()
-    delegate = Delegate()
-    tree_view.setItemDelegate(delegate)
-    model = SettingsModel()
-    tree_view.setModel(model)
-    tree_view.show()
-    app.exec()
-
-
-if __name__ == "__main__":
-    faulthandler.enable()
-    main()
