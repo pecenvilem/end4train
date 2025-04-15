@@ -7,6 +7,7 @@ from typing import Any, Type, Annotated, Callable
 from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject
 from PySide6.QtWidgets import QStyledItemDelegate, QWidget, QComboBox, QStyleFactory, \
     QDoubleSpinBox, QLineEdit, QSpinBox, QCheckBox
+from annotated_types import Ge, Gt, Le, Lt
 from pydantic import BaseModel, Field, AfterValidator
 from pydantic.fields import FieldInfo
 
@@ -22,7 +23,7 @@ class PressureGaugeWidget(BaseModel):
     max_value: Annotated[float, Field(alias="maxValue", title="Maximum value")] = 12.0
     min_angle: Annotated[float, Field(alias="minAngle", title="Minimum angle")] = 10.0
     max_angle: Annotated[float, Field(alias="maxAngle", title="Maximum angle")] = 350.0
-    major_tick_count: Annotated[int, Field(alias="majorTickCount", title="Major ticks over the gauge range")] = 6
+    major_tick_count: Annotated[int, Field(alias="majorTickCount", title="Major ticks over the gauge range", ge=0)] = 6
     minor_tick_count: Annotated[int, Field(alias="minorTickCount", title="Minor ticks between two major ticks")] = 5
     minor_tick_labels: Annotated[bool, Field(alias="minorTickLabels", title="Labels on minor ticks")] = False
 
@@ -65,7 +66,7 @@ class SettingsModel(QAbstractItemModel):
         parent: SettingsModel.Node | None
         children: list[SettingsModel.Node]
         value: Any
-        type_info: FieldInfo | None
+        field_info: FieldInfo | None
 
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
@@ -76,7 +77,7 @@ class SettingsModel(QAbstractItemModel):
 
     def build_tree(self) -> SettingsModel.Node:
         root = SettingsModel.Node(
-            path=tuple(), parent=None, children=list(), value=self.settings, type_info=None
+            path=tuple(), parent=None, children=list(), value=self.settings, field_info=None
         )
         remaining_nodes = [root]
         while remaining_nodes:
@@ -89,7 +90,7 @@ class SettingsModel(QAbstractItemModel):
                 SettingsModel.Node(
                     path=current_node.path + (stem, ), parent=current_node, children=list(),
                     value=self.get_field_value(current_node.path + (stem, )),
-                    type_info=self.get_field_info(current_node.path + (stem, ))
+                    field_info=self.get_field_info(current_node.path + (stem,))
                 )
                 for stem in value_model.model_fields.keys()
             )
@@ -130,6 +131,8 @@ class SettingsModel(QAbstractItemModel):
                 info = self.get_field_info(node.path)
                 return info.title
             elif index.column() == 1:
+                if issubclass(node.field_info.annotation, Enum):
+                    return self.get_field_value(node.path).name
                 return self.get_field_value(node.path)
         elif role == Qt.ItemDataRole.EditRole:
             if index.column() == 1:
@@ -197,25 +200,79 @@ class SettingsModel(QAbstractItemModel):
 #  but this may not take care of setting model- and editor-data...
 class Delegate(QStyledItemDelegate):
 
+    @staticmethod
+    def configure_spin_box(spinbox: QSpinBox | QDoubleSpinBox, metadata: list[Any]) -> QSpinBox:
+        for constraint in metadata:
+            if isinstance(constraint, Ge):
+                spinbox.setMinimum(constraint.ge)
+            if isinstance(constraint, Gt):
+                spinbox.setMinimum(constraint.gt + 1)
+            if isinstance(constraint, Le):
+                spinbox.setMaximum(constraint.le)
+            if isinstance(constraint, Lt):
+                spinbox.setMaximum(constraint.lt - 1)
+        return spinbox
+
     # TODO: implement...
     def createEditor(self, parent, option, index, /) -> QWidget:
         widget_map: dict[type, Type[QWidget]] = {
-            bool: QCheckBox,
+            # TODO: implement CheckBox for boolean values (requires reimplementing Delegate.paintt
+            # bool: QCheckBox,
+            bool: QComboBox,
             int: QSpinBox,
             float: QDoubleSpinBox,
             Enum: QComboBox
         }
         settings_node: SettingsModel.Node = index.internalPointer()
-        widget_class = widget_map.get(settings_node.type_info.annotation, QLineEdit)
 
-        # TODO: implement CheckBox for boolean values (requires reimplementing Delegate.paint)
+        if settings_node.field_info.annotation == bool:
+            widget = QComboBox(parent, editable=False)
+            widget.addItem(self.tr("True"), True)
+            widget.addItem(self.tr("False"), False)
+            return widget
 
-        return widget_class(parent)
+        if settings_node.field_info.annotation == int:
+            return self.configure_spin_box(
+                QSpinBox(parent), settings_node.field_info.metadata
+            )
+
+        if settings_node.field_info.annotation == float:
+            return self.configure_spin_box(
+                QDoubleSpinBox(parent), settings_node.field_info.metadata
+            )
+
+        if issubclass(settings_node.field_info.annotation, Enum):
+            widget = QComboBox(parent, editable=False)
+            for member in settings_node.field_info.annotation:
+                widget.addItem(member.name, member)
+            return widget
+
+        return super().createEditor(parent, option, index)
+
+
+    def paint(self, painter, option, index, /):
+        # TODO: add visualization using a QCheckBox for boolean values
+        super().paint(painter, option, index)
 
     # TODO: implement...
     def setEditorData(self, editor, index, /):
-        pass
-        # editor.insertItems(0, ["1", "2", index.internalPointer().value])
+        if isinstance(editor, QSpinBox):
+            editor.setValue(index.data(Qt.ItemDataRole.EditRole))
+            return
+
+        if isinstance(editor, QDoubleSpinBox):
+            editor.setValue(index.data(Qt.ItemDataRole.EditRole))
+            return
+
+        if isinstance(editor, QComboBox):
+            editor.setCurrentIndex(
+                editor.findData(index.data(Qt.ItemDataRole.EditRole))
+            )
+            return
+
+        if isinstance(editor, QLineEdit):
+            editor.setText(index.data(Qt.ItemDataRole.EditRole))
+            return
 
     # TODO: implement...
     def setModelData(self, editor, model, index, /):
