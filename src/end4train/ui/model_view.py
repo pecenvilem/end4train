@@ -195,9 +195,6 @@ class SettingsModel(QAbstractItemModel):
             return flags
 
 
-# TODO: instead of subclassing a delegate, try to find a way to supply a custom
-#  itemEditorFactory function to the default QStyledItemDelegate
-#  but this may not take care of setting model- and editor-data...
 class Delegate(QStyledItemDelegate):
 
     @staticmethod
@@ -216,7 +213,6 @@ class Delegate(QStyledItemDelegate):
     # TODO: implement...
     def createEditor(self, parent, option, index, /) -> QWidget:
         widget_map: dict[type, Type[QWidget]] = {
-            # TODO: implement CheckBox for boolean values (requires reimplementing Delegate.paintt
             # bool: QCheckBox,
             bool: QComboBox,
             int: QSpinBox,
@@ -226,6 +222,7 @@ class Delegate(QStyledItemDelegate):
         settings_node: SettingsModel.Node = index.internalPointer()
 
         if settings_node.field_info.annotation == bool:
+            # TODO: implement CheckBox for boolean values (requires reimplementing Delegate.paint)
             widget = QComboBox(parent, editable=False)
             widget.addItem(self.tr("True"), True)
             widget.addItem(self.tr("False"), False)
