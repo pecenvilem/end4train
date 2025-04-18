@@ -1,12 +1,14 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
 from typing import Any, Type, Annotated, Callable
 
+from PySide6 import QtWidgets, QtCore
 from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject
 from PySide6.QtWidgets import QStyledItemDelegate, QWidget, QComboBox, QStyleFactory, \
-    QDoubleSpinBox, QLineEdit, QSpinBox, QCheckBox
+    QDoubleSpinBox, QLineEdit, QSpinBox, QCheckBox, QStyleOption, QStyleOptionViewItem
 from annotated_types import Ge, Gt, Le, Lt
 from pydantic import BaseModel, Field, AfterValidator
 from pydantic.fields import FieldInfo
@@ -200,14 +202,21 @@ class Delegate(QStyledItemDelegate):
     @staticmethod
     def configure_spin_box(spinbox: QSpinBox | QDoubleSpinBox, metadata: list[Any]) -> QSpinBox:
         for constraint in metadata:
-            if isinstance(constraint, Ge):
-                spinbox.setMinimum(constraint.ge)
-            if isinstance(constraint, Gt):
-                spinbox.setMinimum(constraint.gt + 1)
-            if isinstance(constraint, Le):
-                spinbox.setMaximum(constraint.le)
-            if isinstance(constraint, Lt):
-                spinbox.setMaximum(constraint.lt - 1)
+            try:
+                if isinstance(constraint, Ge):
+                    # noinspection PyTypeChecker
+                    spinbox.setMinimum(constraint.ge)
+                if isinstance(constraint, Gt):
+                    # noinspection PyTypeChecker
+                    spinbox.setMinimum(constraint.gt + 1)
+                if isinstance(constraint, Le):
+                    # noinspection PyTypeChecker
+                    spinbox.setMaximum(constraint.le)
+                if isinstance(constraint, Lt):
+                    # noinspection PyTypeChecker
+                    spinbox.setMaximum(constraint.lt - 1)
+            except TypeError:
+                continue
         return spinbox
 
     # TODO: implement...
@@ -245,10 +254,23 @@ class Delegate(QStyledItemDelegate):
 
         return super().createEditor(parent, option, index)
 
-
     def paint(self, painter, option, index, /):
         # TODO: add visualization using a QCheckBox for boolean values
-        super().paint(painter, option, index)
+        #  this will require reimplementing the checkbox bahavior (style change on mouse
+        #  hover, signals...) -> postponed...
+        if index.column() != 1:
+            super().paint(painter, option, index)
+            return
+        node: SettingsModel.Node = index.internalPointer()
+        if node.field_info.annotation != bool:
+            super().paint(painter, option, index)
+            return
+        btn_option = QtWidgets.QStyleOptionButton()
+        btn_option.initFrom(option.widget)
+        btn_option.rect = QtCore.QRect(option.rect)
+        option.widget.style().drawControl(QtWidgets.QStyle.ControlElement.CE_CheckBox, btn_option, painter)
+        # TODO: find the 'widget' attribute of QStyleOption used in
+        #  https://stackoverflow.com/questions/59202334/python-pyqt5-is-it-possible-to-add-a-button-to-press-inside-qtreeview
 
     # TODO: validate...
     def setEditorData(self, editor, index, /):
