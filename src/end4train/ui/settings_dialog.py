@@ -15,6 +15,8 @@ class SettingsDialog(QDialog, Ui_SettingsDialog):
         self.tree_view.setItemDelegate(delegate)
         self.tree_view.header().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
 
+    # TODO: implement saving and default value restore
+
 
 def main(args: list[str]):
     app = QApplication(args)
