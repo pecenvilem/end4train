@@ -139,6 +139,7 @@ class SettingsModel(QAbstractItemModel):
         elif role == Qt.ItemDataRole.EditRole:
             if index.column() == 1:
                 return self.get_field_value(node.path)
+        return None
 
     def setData(self, index, value, /, role = ...):
         # TODO: validate
@@ -157,6 +158,7 @@ class SettingsModel(QAbstractItemModel):
             return None
         if orientation == Qt.Orientation.Horizontal:
             return self._headers[section]
+        return None
 
     @lru_cache
     def index(self, row: int, column: int, parent: QModelIndex = ...) -> QModelIndex:
@@ -225,8 +227,8 @@ class Delegate(QStyledItemDelegate):
 
         if settings_node.field_info.annotation == bool:
             widget = QComboBox(parent, editable=False)
-            widget.addItem(self.tr("True"), True)
-            widget.addItem(self.tr("False"), False)
+            widget.addItem(self.tr("true"), True)
+            widget.addItem(self.tr("false"), False)
             return widget
 
         if settings_node.field_info.annotation == int:
@@ -249,21 +251,9 @@ class Delegate(QStyledItemDelegate):
 
     def paint(self, painter, option, index, /):
         # TODO: add visualization using a QCheckBox for boolean values
-        #  this will require reimplementing the checkbox bahavior (style change on mouse
-        #  hover, signals...) -> postponed...
-        if index.column() != 1:
-            super().paint(painter, option, index)
-            return
-        node: SettingsModel.Node = index.internalPointer()
-        if node.field_info.annotation != bool:
-            super().paint(painter, option, index)
-            return
-        btn_option = QtWidgets.QStyleOptionButton()
-        btn_option.initFrom(option.widget)
-        btn_option.rect = QtCore.QRect(option.rect)
-        option.widget.style().drawControl(QtWidgets.QStyle.ControlElement.CE_CheckBox, btn_option, painter)
-        # TODO: find the 'widget' attribute of QStyleOption used in
-        #  https://stackoverflow.com/questions/59202334/python-pyqt5-is-it-possible-to-add-a-button-to-press-inside-qtreeview
+        #  this will require reimplementing the checkbox behavior (style change on mouse hover, signals...) -> postponed
+        #  example: https://stackoverflow.com/questions/59202334/python-pyqt5-is-it-possible-to-add-a-button-to-press-inside-qtreeview
+        super().paint(painter, option, index)
 
     # TODO: validate...
     def setEditorData(self, editor, index, /):

@@ -28,27 +28,27 @@ class Ui_SettingsDialog(object):
         SettingsDialog.setModal(True)
         self.formLayout = QFormLayout(SettingsDialog)
         self.formLayout.setObjectName(u"formLayout")
-        self.buttonBox = QDialogButtonBox(SettingsDialog)
-        self.buttonBox.setObjectName(u"buttonBox")
-        self.buttonBox.setOrientation(Qt.Orientation.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Apply|QDialogButtonBox.StandardButton.Cancel|QDialogButtonBox.StandardButton.RestoreDefaults|QDialogButtonBox.StandardButton.Save)
-        self.buttonBox.setCenterButtons(False)
+        self.button_box = QDialogButtonBox(SettingsDialog)
+        self.button_box.setObjectName(u"button_box")
+        self.button_box.setOrientation(Qt.Orientation.Horizontal)
+        self.button_box.setStandardButtons(QDialogButtonBox.StandardButton.Apply|QDialogButtonBox.StandardButton.Cancel|QDialogButtonBox.StandardButton.RestoreDefaults|QDialogButtonBox.StandardButton.Save)
+        self.button_box.setCenterButtons(False)
 
-        self.formLayout.setWidget(1, QFormLayout.SpanningRole, self.buttonBox)
+        self.formLayout.setWidget(1, QFormLayout.SpanningRole, self.button_box)
 
-        self.treeView = QTreeView(SettingsDialog)
-        self.treeView.setObjectName(u"treeView")
-        self.treeView.setTabKeyNavigation(True)
-        self.treeView.setAlternatingRowColors(True)
-        self.treeView.header().setCascadingSectionResizes(True)
-        self.treeView.header().setStretchLastSection(False)
+        self.tree_view = QTreeView(SettingsDialog)
+        self.tree_view.setObjectName(u"tree_view")
+        self.tree_view.setTabKeyNavigation(True)
+        self.tree_view.setAlternatingRowColors(True)
+        self.tree_view.header().setCascadingSectionResizes(True)
+        self.tree_view.header().setStretchLastSection(True)
 
-        self.formLayout.setWidget(0, QFormLayout.SpanningRole, self.treeView)
+        self.formLayout.setWidget(0, QFormLayout.SpanningRole, self.tree_view)
 
 
         self.retranslateUi(SettingsDialog)
-        self.buttonBox.accepted.connect(SettingsDialog.accept)
-        self.buttonBox.rejected.connect(SettingsDialog.reject)
+        self.button_box.accepted.connect(SettingsDialog.accept)
+        self.button_box.rejected.connect(SettingsDialog.reject)
 
         QMetaObject.connectSlotsByName(SettingsDialog)
     # setupUi
