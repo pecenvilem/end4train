@@ -23,7 +23,7 @@ class Ui_SettingsDialog(object):
     def setupUi(self, SettingsDialog):
         if not SettingsDialog.objectName():
             SettingsDialog.setObjectName(u"SettingsDialog")
-        SettingsDialog.resize(403, 201)
+        SettingsDialog.resize(634, 513)
         SettingsDialog.setSizeGripEnabled(False)
         SettingsDialog.setModal(True)
         self.formLayout = QFormLayout(SettingsDialog)

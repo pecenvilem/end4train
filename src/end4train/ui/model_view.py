@@ -39,7 +39,11 @@ def pressure_gauge_widget_factory(
     )
 
 class ThemeSection(BaseModel):
-    style: Annotated[str, Field(title="Style"), AfterValidator(validate_style_string)] = "windows11"
+    style: Annotated[
+        str,
+        Field(title="Style", json_schema_extra={"platform_values": {"qt": QStyleFactory.keys()} }),
+        AfterValidator(validate_style_string)
+    ] = "Windows"
     color_scheme: Annotated[Qt.ColorScheme, Field(alias="colorScheme", title="Color Scheme")] = Qt.ColorScheme.Unknown
 
 class PressureWidgetSection(BaseModel):
@@ -240,6 +244,17 @@ class Delegate(QStyledItemDelegate):
             return self.configure_spin_box(
                 QDoubleSpinBox(parent), settings_node.field_info.metadata
             )
+
+        if settings_node.field_info.annotation == str:
+            if "platform_values" not in settings_node.field_info.json_schema_extra:
+                return super().createEditor(parent, option, index)
+            platform_values: dict[str, list[str]] = settings_node.field_info.json_schema_extra["platform_values"]
+            if "qt" not in platform_values:
+                return super().createEditor(parent, option, index)
+            widget = QComboBox(parent, editable=False)
+            for i, value in enumerate(platform_values["qt"]):
+                widget.addItem(value, value)
+            return widget
 
         if issubclass(settings_node.field_info.annotation, Enum):
             widget = QComboBox(parent, editable=False)
