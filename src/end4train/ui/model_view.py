@@ -221,13 +221,6 @@ class Delegate(QStyledItemDelegate):
 
     # TODO: implement...
     def createEditor(self, parent, option, index, /) -> QWidget:
-        widget_map: dict[type, Type[QWidget]] = {
-            # bool: QCheckBox,
-            bool: QComboBox,
-            int: QSpinBox,
-            float: QDoubleSpinBox,
-            Enum: QComboBox
-        }
         settings_node: SettingsModel.Node = index.internalPointer()
 
         if settings_node.field_info.annotation == bool:
