@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
-from typing import Any, Type, Annotated, Callable
+from typing import Any, Type, Annotated, Callable, TypeVar
 
 from PySide6 import QtWidgets, QtCore
 from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject
@@ -146,7 +146,6 @@ class SettingsModel(QAbstractItemModel):
         return None
 
     def setData(self, index, value, /, role = ...):
-        # TODO: validate
         if role == Qt.ItemDataRole.EditRole:
             if index.column() != 1:
                 return False
@@ -202,30 +201,38 @@ class SettingsModel(QAbstractItemModel):
         else:
             return flags
 
+T = TypeVar("T")
+
+def filter_constraints(metadata: list[Any], constraint_type: Type[T]) -> list[T]:
+    return list(constraint for constraint in metadata if isinstance(constraint, constraint_type))
 
 class Delegate(QStyledItemDelegate):
 
     @staticmethod
     def configure_spin_box(spinbox: QSpinBox | QDoubleSpinBox, metadata: list[Any]) -> QSpinBox:
-        for constraint in metadata:
-            try:
-                if isinstance(constraint, Ge):
-                    # noinspection PyTypeChecker
-                    spinbox.setMinimum(constraint.ge)
-                if isinstance(constraint, Gt):
-                    # noinspection PyTypeChecker
-                    spinbox.setMinimum(constraint.gt + 1)
-                if isinstance(constraint, Le):
-                    # noinspection PyTypeChecker
-                    spinbox.setMaximum(constraint.le)
-                if isinstance(constraint, Lt):
-                    # noinspection PyTypeChecker
-                    spinbox.setMaximum(constraint.lt - 1)
-            except TypeError:
-                continue
+        ge = filter_constraints(metadata, Ge)
+        gt = filter_constraints(metadata, Gt)
+        le = filter_constraints(metadata, Le)
+        lt = filter_constraints(metadata, Lt)
+        if ge:
+            value = ge[-1].ge
+            spinbox.setMinimum(value)
+        elif gt:
+            value = gt[-1].gt
+            spinbox.setMinimum(value + 1)
+        else:
+            spinbox.setMinimum(-float("inf"))
+
+        if le:
+            value = le[-1].le
+            spinbox.setMaximum(value)
+        elif lt:
+            value = lt[-1].lt
+            spinbox.setMaximum(value - 1)
+        else:
+            spinbox.setMaximum(float("inf"))
         return spinbox
 
-    # TODO: implement...
     def createEditor(self, parent, option, index, /) -> QWidget:
         settings_node: SettingsModel.Node = index.internalPointer()
 
@@ -270,7 +277,6 @@ class Delegate(QStyledItemDelegate):
         #  example: https://stackoverflow.com/questions/59202334/python-pyqt5-is-it-possible-to-add-a-button-to-press-inside-qtreeview
         super().paint(painter, option, index)
 
-    # TODO: validate...
     def setEditorData(self, editor, index, /):
         if isinstance(editor, QSpinBox):
             editor.setValue(index.data(Qt.ItemDataRole.EditRole))
@@ -290,6 +296,25 @@ class Delegate(QStyledItemDelegate):
             editor.setText(index.data(Qt.ItemDataRole.EditRole))
             return
 
-    # TODO: implement...
     def setModelData(self, editor, model, index, /):
-        pass
+        if isinstance(editor, QSpinBox):
+            model.setData(index, editor.value(), Qt.ItemDataRole.EditRole)
+            return
+
+        if isinstance(editor, QDoubleSpinBox):
+            model.setData(index, editor.value(), Qt.ItemDataRole.EditRole)
+            return
+
+        if isinstance(editor, QComboBox):
+            settings_node: SettingsModel.Node = index.internalPointer()
+            if settings_node.field_info.annotation == bool:
+                model.setData(index, editor.itemData(editor.currentIndex()), Qt.ItemDataRole.EditRole)
+            if settings_node.field_info.annotation == str:
+                model.setData(index, editor.itemData(editor.currentIndex()), Qt.ItemDataRole.EditRole)
+            if issubclass(settings_node.field_info.annotation, Enum):
+                model.setData(index, editor.itemData(editor.currentIndex()), Qt.ItemDataRole.EditRole)
+
+        if isinstance(editor, QLineEdit):
+            model.setData(index, editor.text(), Qt.ItemDataRole.EditRole)
+            return
+
