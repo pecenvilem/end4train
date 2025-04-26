@@ -221,7 +221,10 @@ class Delegate(QStyledItemDelegate):
             value = gt[-1].gt
             spinbox.setMinimum(value + 1)
         else:
-            spinbox.setMinimum(-float("inf"))
+            if isinstance(spinbox, QDoubleSpinBox):
+                spinbox.setMinimum(-float("inf"))
+            else:
+                spinbox.setMinimum(-2**15)
 
         if le:
             value = le[-1].le
@@ -230,7 +233,10 @@ class Delegate(QStyledItemDelegate):
             value = lt[-1].lt
             spinbox.setMaximum(value - 1)
         else:
-            spinbox.setMaximum(float("inf"))
+            if isinstance(spinbox, QDoubleSpinBox):
+                spinbox.setMaximum(float("inf"))
+            else:
+                spinbox.setMaximum(2**15-1)
         return spinbox
 
     def createEditor(self, parent, option, index, /) -> QWidget:
