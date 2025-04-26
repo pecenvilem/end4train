@@ -5,12 +5,12 @@ from enum import Enum
 from functools import lru_cache
 from typing import Any, Type, Annotated, Callable, TypeVar
 
-from PySide6 import QtWidgets, QtCore
 from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject
 from PySide6.QtWidgets import QStyledItemDelegate, QWidget, QComboBox, QStyleFactory, \
-    QDoubleSpinBox, QLineEdit, QSpinBox, QCheckBox, QStyleOption, QStyleOptionViewItem
+    QDoubleSpinBox, QLineEdit, QSpinBox
 from annotated_types import Ge, Gt, Le, Lt
 from pydantic import BaseModel, Field, AfterValidator
+# noinspection PyProtectedMember
 from pydantic.fields import FieldInfo
 
 
@@ -123,8 +123,6 @@ class SettingsModel(QAbstractItemModel):
         parent: type[BaseModel] = type(self.get_field_value(path[:-1]))
         try:
             return parent.model_fields[path[-1]]
-        except AttributeError as e:
-            raise
         except KeyError as e:
             raise ValueError(f"Invalid settings path: {path}") from e
 
@@ -197,7 +195,7 @@ class SettingsModel(QAbstractItemModel):
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         flags = super().flags(index)
         if index.column() == 1 and not index.internalPointer().children:
-            return Qt.ItemFlag.ItemIsEditable | flags
+            return flags | Qt.ItemFlag.ItemIsEditable
         else:
             return flags
 
@@ -208,6 +206,7 @@ def filter_constraints(metadata: list[Any], constraint_type: Type[T]) -> list[T]
 
 class Delegate(QStyledItemDelegate):
 
+    # noinspection PyTypeChecker
     @staticmethod
     def configure_spin_box(spinbox: QSpinBox | QDoubleSpinBox, metadata: list[Any]) -> QSpinBox:
         ge = filter_constraints(metadata, Ge)
