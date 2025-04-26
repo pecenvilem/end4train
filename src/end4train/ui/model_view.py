@@ -74,10 +74,10 @@ class SettingsModel(QAbstractItemModel):
         value: Any
         field_info: FieldInfo | None
 
-    def __init__(self, parent: QObject | None = None):
+    def __init__(self, parent: QObject | None = None, settings: Settings | None = None):
         super().__init__(parent)
         self._headers = ("key", "value")
-        self.settings = Settings()
+        self.settings = settings if settings is not None else Settings()
         self.root_node = self.build_tree()
         pass
 
@@ -102,6 +102,9 @@ class SettingsModel(QAbstractItemModel):
             )
             remaining_nodes.extend(current_node.children)
         return root
+
+    def get_settings(self) -> Settings:
+        return self.settings
 
     def get_field_value(self, path: SettingsPath) -> Any:
         current_object = self.settings
