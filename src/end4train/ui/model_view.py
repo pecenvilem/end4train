@@ -81,6 +81,12 @@ class SettingsModel(QAbstractItemModel):
         self.root_node = self.build_tree()
         pass
 
+    def reset(self) -> None:
+        self.beginResetModel()
+        self.settings = Settings()
+        self.root_node = self.build_tree()
+        self.endResetModel()
+
     def build_tree(self) -> SettingsModel.Node:
         root = SettingsModel.Node(
             path=tuple(), parent=None, children=list(), value=self.settings, field_info=None

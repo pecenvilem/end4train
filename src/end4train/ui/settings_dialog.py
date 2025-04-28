@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-from PySide6.QtWidgets import QDialog, QWidget, QApplication, QHeaderView
+from PySide6.QtWidgets import QDialog, QWidget, QApplication, QHeaderView, QDialogButtonBox
 
 from end4train.ui.model_view import Settings, SettingsModel, Delegate
 from end4train.ui.settings_dialog_ui import Ui_SettingsDialog
@@ -12,21 +12,26 @@ class SettingsDialog(QDialog, Ui_SettingsDialog):
     def __init__(self, parent: QWidget, settings: Settings):
         super().__init__(parent)
         self.setupUi(self)
-        model = SettingsModel(parent, settings)
+        self.model = SettingsModel(parent, settings)
         delegate = Delegate()
-        self.tree_view.setModel(model)
+        self.tree_view.setModel(self.model)
         self.tree_view.setItemDelegate(delegate)
         self.tree_view.header().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        self.tree_view.expandAll()
+        self.button_box.button(QDialogButtonBox.StandardButton.RestoreDefaults).clicked.connect(self.reset)
 
-    # TODO: implement saving and default value restore
+    def reset(self) -> None:
+        self.model.reset()
+        self.tree_view.expandAll()
+
+    def get_settings(self) -> Settings:
+        return self.model.settings
 
 
 def main(args: list[str]):
     app = QApplication(args)
 
-    settings = Settings.model_validate_json(SETTINGS_JSON_FILE.read_text(), strict=True)
-    # TODO: DEBUG: some values are not loaded from the file - default are used eve if value is present in data
-    #  breaking e.g.: ColorScheme, MinimumValue, tick-counts... pretty much all non-boolean and non-string items
+    settings = Settings.model_validate_json(SETTINGS_JSON_FILE.read_text(), by_name=True)
 
     dialog = SettingsDialog(app.activeWindow(), settings)
     dialog.show()

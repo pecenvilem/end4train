@@ -1,18 +1,18 @@
 {
-    "autostart": true,
+    "autostart": false,
     "theme": {
-        "style": "windowsvista",
+        "style": "Windows",
         "color_scheme": 0
     },
     "widget": {
         "pressure_widgets": {
             "main_reservoir": {
-                "min_value": 0.0,
-                "max_value": 12.0,
-                "min_angle": 10.0,
+                "min_value": 5.0,
+                "max_value": 28.6,
+                "min_angle": 15.0,
                 "max_angle": 350.0,
                 "major_tick_count": 6,
-                "minor_tick_count": 13,
+                "minor_tick_count": 5,
                 "minor_tick_labels": false
             }
         }
