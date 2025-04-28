@@ -9,14 +9,15 @@ from PySide6.QtCore import Qt, QSettings
 from pandas.core.dtypes.common import is_numeric_dtype
 
 from end4train.app.device_connectors import OnLineListener, LogDownloader, DataSource
-from end4train.app.traces_model import TracesModel
+from end4train.app.settings import Settings
+from end4train.ui.traces_model import TracesModel
 from end4train.config.app import COMPANY, APP_NAME, SettingsKey
-from end4train.config.paths import RECORD_OBJECT_KSY_PATH
+from end4train.config.paths import RECORD_OBJECT_KSY_PATH, SETTINGS_JSON_FILE
 from end4train.communication.decode import decode_log_file, merge_type_specific_dataframes, decode_p_packet, \
     pivot_per_variable, parse_p_packet
 from end4train.communication.ksy import KSYInfoStore
 from end4train.ui.main_window import MainWindow
-from end4train.app.dataframe_model import PandasModel
+from end4train.ui.dataframe_model import PandasModel
 from end4train.ui.settings_dialog import SettingsDialog
 
 
@@ -43,10 +44,12 @@ class Gui(QApplication):
             toggle_listener: Callable[[str, bool], None],
             download_log: Callable[[str], None],
             load_file: Callable[[Path], None],
+            app_settings: Settings
     ) -> None:
         super().__init__(argv)
 
-        self.settings = QSettings(
+        self.app_settings = app_settings
+        self.qt_settings = QSettings(
             QSettings.Format.IniFormat, QSettings.Scope.UserScope, COMPANY, APP_NAME
         )
 
@@ -61,8 +64,8 @@ class Gui(QApplication):
         self.plot_traces = {}
 
         self.main_window = MainWindow(
-            toggle_listener, download_log, self.select_traces, self.traces_model, self.data_model, self.settings,
-            self.edit_theme
+            toggle_listener, download_log, self.select_traces, self.traces_model, self.data_model, self.qt_settings,
+            self.app_settings, self.edit_theme
         )
         self.main_window.actionOpen_log.triggered.connect(self.load_file)
 
@@ -83,7 +86,7 @@ class Gui(QApplication):
         self.set_color_scheme()
 
     def set_color_scheme(self):
-        color_scheme = self.settings.value(f"{SettingsKey.COLOR_SCHEME}")
+        color_scheme = self.app_settings.value(f"{SettingsKey.COLOR_SCHEME}")
         if not isinstance(color_scheme, int):
             self.styleHints().setColorScheme(Qt.ColorScheme.Unknown)
             return
@@ -99,7 +102,7 @@ class Gui(QApplication):
     def edit_theme(self):
         # styles = [style.lower() for style in QStyleFactory.keys()]
 
-        dialog = SettingsDialog(self.main_window)
+        dialog = SettingsDialog(self.main_window, self.app_settings)
         dialog.accepted.connect(self.store_theme)
         dialog.setModal(True)
         dialog.open()
@@ -159,7 +162,10 @@ class Monitor:
     def __init__(self, argv: List[str]):
         self.data = pd.DataFrame()
 
-        self.gui_app = Gui(argv, self.shutdown, self.data, self.toggle_listener, self.download_log, self.load_file)
+        self.settings = Settings.model_validate_json(SETTINGS_JSON_FILE.read_text(), by_name=True)
+        self.gui_app = Gui(
+            argv, self.shutdown, self.data, self.toggle_listener, self.download_log, self.load_file, self.settings
+        )
 
         self.ksy_info_store = KSYInfoStore(RECORD_OBJECT_KSY_PATH)
         self.listener = OnLineListener(partial(self.add_data, source=DataSource.P_PACKET))

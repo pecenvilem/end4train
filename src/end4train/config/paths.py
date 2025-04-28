@@ -24,6 +24,7 @@ LOGS_FOLDER = Path(
         platformdirs.user_log_dir(APP_NAME, COMPANY)
     )
 )
+SETTINGS_JSON_FILE = CONFIG_FOLDER / "settings.json"
 SAMPLE_DATA_PARQUET_FOLDER = Path(__file__).parent / "sample_data"
 HOT_SAMPLE_PARQUET_FOLDER = SAMPLE_DATA_PARQUET_FOLDER / "hot"
 EOT_SAMPLE_PARQUET_FOLDER = SAMPLE_DATA_PARQUET_FOLDER / "eot"

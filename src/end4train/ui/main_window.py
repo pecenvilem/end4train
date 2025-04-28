@@ -4,11 +4,12 @@ from PySide6.QtCore import QUrl, QSettings, QEvent
 from PySide6.QtGui import QCloseEvent, Qt
 from PySide6.QtWidgets import QMainWindow, QAbstractItemView
 
-from end4train.app.traces_model import TracesModel
+from end4train.ui.traces_model import TracesModel
 from end4train.config.app import COMPANY, APP_NAME, SETTINGS_VERSION_NUMBER, SaveOwner, SettingsKey
 from end4train.config.dummy_device import TEST_HOT_HOST, TEST_EOT_HOST
 from end4train.ui.main_window_ui import Ui_MainWindow
-from end4train.app.dataframe_model import PandasModel
+from end4train.ui.dataframe_model import PandasModel
+from end4train.app.settings import Settings
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -18,12 +19,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                  select_traces_callback: Callable,
                  trace_item_model: TracesModel,
                  data_table_model: PandasModel,
-                 settings: QSettings,
+                 qt_settings: QSettings,
+                 app_settings: Settings,
                  edit_theme: Callable
                  ):
         super().__init__()
         self.setupUi(self)
-        self.settings = settings
+        self.qt_settings = qt_settings
         self.load_layout()
 
         self.actionSave_Layout.triggered.connect(lambda: self.save_layout(SaveOwner.USER))
@@ -58,25 +60,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # timer.start(5000)
 
     def load_layout(self, owner: SaveOwner = SaveOwner.SHUTDOWN_AUTOSAVE) -> None:
-        # TODO: fix - settings object
-        state = self.settings.value(f"{SettingsKey.WINDOW_STATE}/{owner}")
-        geometry = self.settings.value(f"{SettingsKey.GEOMETRY_STATE}/{owner}")
+        # TODO: fix - qt_settings object
+        state = self.qt_settings.value(f"{SettingsKey.WINDOW_STATE}/{owner}")
+        geometry = self.qt_settings.value(f"{SettingsKey.GEOMETRY_STATE}/{owner}")
         self.restoreState(state, SETTINGS_VERSION_NUMBER)
         self.restoreGeometry(geometry)
-        self.settings.value("test/int", type=int)
-        self.settings.value("test/float", type=float)
-        self.settings.value("test/str", type=str)
-        self.settings.value("test/enum")
-        self.settings.value("test/bool", type=bool)
+        self.qt_settings.value("test/int", type=int)
+        self.qt_settings.value("test/float", type=float)
+        self.qt_settings.value("test/str", type=str)
+        self.qt_settings.value("test/enum")
+        self.qt_settings.value("test/bool", type=bool)
 
     def save_layout(self, owner: SaveOwner = SaveOwner.SHUTDOWN_AUTOSAVE) -> None:
-        self.settings.setValue(f"{SettingsKey.WINDOW_STATE}/{owner}", self.saveState(SETTINGS_VERSION_NUMBER))
-        self.settings.setValue(f"{SettingsKey.GEOMETRY_STATE}/{owner}", self.saveGeometry())
-        self.settings.setValue("test/int", 5)
-        self.settings.setValue("test/float", 7.2)
-        self.settings.setValue("test/str", "String")
-        self.settings.setValue("test/enum", Qt.ColorScheme.Light)
-        self.settings.setValue("test/bool", False)
+        self.qt_settings.setValue(f"{SettingsKey.WINDOW_STATE}/{owner}", self.saveState(SETTINGS_VERSION_NUMBER))
+        self.qt_settings.setValue(f"{SettingsKey.GEOMETRY_STATE}/{owner}", self.saveGeometry())
+        self.qt_settings.setValue("test/int", 5)
+        self.qt_settings.setValue("test/float", 7.2)
+        self.qt_settings.setValue("test/str", "String")
+        self.qt_settings.setValue("test/enum", Qt.ColorScheme.Light)
+        self.qt_settings.setValue("test/bool", False)
 
     def toggle_listener(self):
         self.toggle_listener_callback(

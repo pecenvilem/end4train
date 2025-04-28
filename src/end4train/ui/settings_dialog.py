@@ -1,12 +1,12 @@
 import sys
-from pathlib import Path
 
 from PySide6.QtWidgets import QDialog, QWidget, QApplication, QHeaderView, QDialogButtonBox
 
-from end4train.ui.model_view import Settings, SettingsModel, Delegate
+from end4train.config.paths import SETTINGS_JSON_FILE
+from end4train.ui.settings_model import SettingsModel, Delegate
+from end4train.app.settings import Settings
 from end4train.ui.settings_dialog_ui import Ui_SettingsDialog
 
-SETTINGS_JSON_FILE = Path("settings.json")
 
 class SettingsDialog(QDialog, Ui_SettingsDialog):
     def __init__(self, parent: QWidget, settings: Settings):
