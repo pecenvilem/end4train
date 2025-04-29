@@ -65,20 +65,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         geometry = self.qt_settings.value(f"{SettingsKey.GEOMETRY_STATE}/{owner}")
         self.restoreState(state, SETTINGS_VERSION_NUMBER)
         self.restoreGeometry(geometry)
-        self.qt_settings.value("test/int", type=int)
-        self.qt_settings.value("test/float", type=float)
-        self.qt_settings.value("test/str", type=str)
-        self.qt_settings.value("test/enum")
-        self.qt_settings.value("test/bool", type=bool)
 
     def save_layout(self, owner: SaveOwner = SaveOwner.SHUTDOWN_AUTOSAVE) -> None:
         self.qt_settings.setValue(f"{SettingsKey.WINDOW_STATE}/{owner}", self.saveState(SETTINGS_VERSION_NUMBER))
         self.qt_settings.setValue(f"{SettingsKey.GEOMETRY_STATE}/{owner}", self.saveGeometry())
-        self.qt_settings.setValue("test/int", 5)
-        self.qt_settings.setValue("test/float", 7.2)
-        self.qt_settings.setValue("test/str", "String")
-        self.qt_settings.setValue("test/enum", Qt.ColorScheme.Light)
-        self.qt_settings.setValue("test/bool", False)
 
     def toggle_listener(self):
         self.toggle_listener_callback(

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from functools import lru_cache
 from typing import Any, TypeVar, Type
 
 from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject
@@ -114,7 +113,6 @@ class SettingsModel(QAbstractItemModel):
             return True
         return False
 
-    @lru_cache
     def headerData(self, section, orientation, /, role = ...):
         if role != Qt.ItemDataRole.DisplayRole:
             return None
@@ -122,14 +120,12 @@ class SettingsModel(QAbstractItemModel):
             return self._headers[section]
         return None
 
-    @lru_cache
     def index(self, row: int, column: int, parent: QModelIndex = ...) -> QModelIndex:
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
         parent_node = parent.internalPointer() if parent.isValid() else self.root_node
         return self.createIndex(row, column, parent_node.children[row])
 
-    @lru_cache
     def parent(self, index: QModelIndex = ...) -> QModelIndex:
         if not index.isValid():
             return QModelIndex()
@@ -139,7 +135,6 @@ class SettingsModel(QAbstractItemModel):
         parent_row = current_index_node.parent.children.index(current_index_node)
         return self.createIndex(parent_row, 0, current_index_node.parent)
 
-    @lru_cache
     def rowCount(self, parent: QModelIndex = ...) -> int:
         if parent.column() > 0:
             return 0
@@ -149,7 +144,6 @@ class SettingsModel(QAbstractItemModel):
             parent_node = parent.internalPointer()
         return len(parent_node.children)
 
-    @lru_cache
     def columnCount(self, parent: QModelIndex = ...):
         return 2
 
