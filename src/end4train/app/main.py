@@ -25,8 +25,6 @@ from end4train.ui.app import Gui
 
 # TODO: add analog gauges (possibly implement a simple one from scratch...)
 
-# TODO: add UI for selecting style and possibly overriding color theme
-
 class Monitor:
     def __init__(self, argv: List[str]):
         self.data = pd.DataFrame()

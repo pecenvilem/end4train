@@ -60,7 +60,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # timer.start(5000)
 
     def load_layout(self, owner: SaveOwner = SaveOwner.SHUTDOWN_AUTOSAVE) -> None:
-        # TODO: fix - qt_settings object
         state = self.qt_settings.value(f"{SettingsKey.WINDOW_STATE}/{owner}")
         geometry = self.qt_settings.value(f"{SettingsKey.GEOMETRY_STATE}/{owner}")
         self.restoreState(state, SETTINGS_VERSION_NUMBER)
