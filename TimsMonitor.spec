@@ -4,7 +4,10 @@
 a = Analysis(
     ['src\\end4train\\app\\main.py'],
     pathex=[],
-    binaries=[],
+    binaries=[
+    # TODO: possibly remove dlls, find another workaround for win7 support
+    ('build\\dll\\', 'build\\dll\\'),
+    ],
     datas=[
     ('src\\end4train\\config\\kaitai_specs\\', 'end4train\\config\\kaitai_specs\\'),
     ('src\\end4train\\config\\sample_data\\', 'end4train\\config\\sample_data\\'),
