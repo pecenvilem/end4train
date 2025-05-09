@@ -80,55 +80,13 @@ class DropGrid(QWidget):
     def dropEvent(self, event: QDropEvent):
         # TODO: Add widget insertion and placement
         if event.mimeData().hasText():
-            # Get the ID of the dragged widget from the MIME data.
-            widget_id = int(event.mimeData().text())
-
-            # Find the dragged widget by its ID.  We have to iterate through
-            # all child widgets to find it.  In a real application, you would
-            # likely have a better way to manage your widgets (e.g., a dictionary).
-            dragged_widget = None
-            for child in self.parent().findChildren(QWidget): # changed to self.parent()
-                if id(child) == widget_id:
-                    dragged_widget = child
-                    break
-
-            if dragged_widget is None:
-                event.ignore()
-                return
-
             # Determine the row and column where the widget was dropped.
             pos = event.position().toPoint()
-            row, col = self.get_row_col_from_position(pos)
-            # print(f"Dropped at row: {row}, col: {col}") # Debugging
 
-            if row is None or col is None:
-                event.ignore()
-                return
-
-            # Check if the cell is already occupied.
-            if self.cells[(row, col)] is not None:
+            # Check if the cell is already occupied
                 # Swap widgets.
-                old_widget = self.cells[(row, col)]
-                old_row, old_col = self.get_widget_position(old_widget)
-
-                self.grid_layout.removeWidget(old_widget)
-                self.grid_layout.removeWidget(dragged_widget)
-
-                self.grid_layout.addWidget(dragged_widget, old_row, old_col)
-                self.grid_layout.addWidget(old_widget, row, col)
-
-                self.cells[(row, col)] = old_widget
-                self.cells[(old_row, old_col)] = dragged_widget
-            else:
                 # Remove the widget from its old layout (if it has one)
-                if dragged_widget.layout() is not None:
-                    dragged_widget.layout().removeWidget(dragged_widget)
                 # Add the widget to the grid layout.
-                self.grid_layout.addWidget(dragged_widget, row, col)
-                self.cells[(row, col)] = dragged_widget  # Store the widget in the cell
-            event.accept()
-        else:
-            event.ignore()
 
 
 class SourceWidget(QWidget):
