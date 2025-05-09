@@ -18,10 +18,10 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QTransform)
 from PySide6.QtQuickWidgets import QQuickWidget
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDockWidget, QGroupBox,
-    QHBoxLayout, QHeaderView, QLabel, QLayout,
-    QListView, QMainWindow, QMenu, QMenuBar,
-    QPushButton, QRadioButton, QSizePolicy, QSpacerItem,
-    QStatusBar, QTableView, QVBoxLayout, QWidget)
+    QHBoxLayout, QLabel, QLayout, QListView,
+    QMainWindow, QMenu, QMenuBar, QPushButton,
+    QRadioButton, QSizePolicy, QSpacerItem, QStatusBar,
+    QVBoxLayout, QWidget)
 
 from pyqtgraph import GraphicsLayoutWidget
 
@@ -151,22 +151,11 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_2.addLayout(self.verticalLayout_8)
 
-        self.verticalLayout_2 = QVBoxLayout()
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.label = QLabel(self.centralwidget)
-        self.label.setObjectName(u"label")
+        self.gauges_group_box = QGroupBox(self.centralwidget)
+        self.gauges_group_box.setObjectName(u"gauges_group_box")
 
-        self.verticalLayout_2.addWidget(self.label)
+        self.horizontalLayout_2.addWidget(self.gauges_group_box)
 
-        self.table = QTableView(self.centralwidget)
-        self.table.setObjectName(u"table")
-
-        self.verticalLayout_2.addWidget(self.table)
-
-
-        self.horizontalLayout_2.addLayout(self.verticalLayout_2)
-
-        self.horizontalLayout_2.setStretch(1, 1)
 
         self.horizontalLayout_3.addLayout(self.horizontalLayout_2)
 
@@ -276,7 +265,7 @@ class Ui_MainWindow(object):
         self.groupBox_3.setTitle(QCoreApplication.translate("MainWindow", u"Log", None))
         self.load_btn.setText(QCoreApplication.translate("MainWindow", u"Download", None))
         self.open_btn.setText(QCoreApplication.translate("MainWindow", u"Open file", None))
-        self.label.setText(QCoreApplication.translate("MainWindow", u"Data", None))
+        self.gauges_group_box.setTitle(QCoreApplication.translate("MainWindow", u"Current values", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuWindow.setTitle(QCoreApplication.translate("MainWindow", u"View", None))
         self.dock_plot.setWindowTitle(QCoreApplication.translate("MainWindow", u"Plot", None))

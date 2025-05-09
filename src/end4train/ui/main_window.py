@@ -13,6 +13,10 @@ from end4train.app.settings import Settings
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
+
+    # TODO: add treeview for browsing data sources
+    # TODO: add widget for displaying variable visualisations
+
     def __init__(self,
                  toggle_listener_callback: Callable,
                  request_download_callback: Callable,
@@ -39,7 +43,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.select_traces_callback = select_traces_callback
         self.traces_list_view.setModel(trace_item_model)
         self.traces_list_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.table.setModel(data_table_model)
 
         self.plot.setBackground("white")
         # TODO: replace PyQtGraph with pglive https://github.com/domarm-comat/pglive/tree/main

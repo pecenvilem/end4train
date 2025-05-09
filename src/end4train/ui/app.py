@@ -17,7 +17,7 @@ from end4train.ui.traces_model import TracesModel
 
 class Gui(QApplication):
     def __init__(
-            self, argv: List[str],
+            self, argv: list[str],
             shutdown_callback: Callable,
             starting_data: pd.DataFrame,
             toggle_listener: Callable[[str, bool], None],
