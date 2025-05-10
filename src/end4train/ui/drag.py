@@ -1,12 +1,14 @@
 import sys
+from numbers import Number
 from random import choice
 
 from PySide6.QtWidgets import (
     QApplication, QWidget, QGridLayout, QLabel,
     QPushButton, QSizePolicy, QScrollArea, QVBoxLayout, QStyle, QMainWindow
 )
-from PySide6.QtCore import Qt, QMimeData, QPoint, QRect
-from PySide6.QtGui import QDrag, QPixmap, QPainter, QColor, QDragEnterEvent, QDropEvent
+from PySide6.QtCore import Qt, QMimeData, QPoint, QRect, QSize, QPointF
+from PySide6.QtGui import QDrag, QPixmap, QPainter, QColor, QDragEnterEvent, QDropEvent, QIcon
+
 
 class DraggableWidget(QWidget):
     """
@@ -65,28 +67,68 @@ class DropGrid(QWidget):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self.grid_layout = QGridLayout(self)
-        placeholder = QLabel()
-        placeholder.setText("Drag widgets here...")
-        self.grid_layout.addWidget(placeholder, 0, 0, Qt.AlignmentFlag.AlignCenter)
-        self.setAcceptDrops(True)  # This is crucial for accepting drops!
+        self.widgets: list[QWidget] = []
+        for i in range(3):
+            for j in range(3):
+                if i == 1 and j == 1:
+                    center_widget = QLabel(self)
+                    center_widget.setText("Drop widgets here...")
+                    self.widgets.append(center_widget)
+                    self.grid_layout.addWidget(center_widget, 1, 1)
+                    continue
+                self.grid_layout.addWidget(self.get_placeholder(), i, j, Qt.AlignmentFlag.AlignCenter)
+        self.exit_edit_mode()
+        self.setAcceptDrops(True)
+
+    def get_placeholder(self) -> QLabel:
+        placeholder = QLabel(self)
+        icon = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.ListAdd))
+        placeholder.setPixmap(icon.pixmap(QSize(30, 30)))
+        return placeholder
+
+    def enter_edit_mode(self) -> None:
+        for i in range(self.grid_layout.count()):
+            self.grid_layout.itemAt(i).widget().show()
+
+    def exit_edit_mode(self) -> None:
+        for i in range(self.grid_layout.count()):
+            widget = self.grid_layout.itemAt(i).widget()
+            if widget in self.widgets:
+                continue
+            widget.hide()
 
     def dragEnterEvent(self, event: QDragEnterEvent):
-        # TODO: Add widget insertion and placement
         if event.mimeData().hasText():
-            event.acceptProposedAction()  # Accept the proposed action (e.g., move)
+            self.enter_edit_mode()
+            event.acceptProposedAction()
         else:
             event.ignore()
 
-    def dropEvent(self, event: QDropEvent):
-        # TODO: Add widget insertion and placement
-        if event.mimeData().hasText():
-            # Determine the row and column where the widget was dropped.
-            pos = event.position().toPoint()
+    def dragLeaveEvent(self, event, /):
+        self.exit_edit_mode()
 
-            # Check if the cell is already occupied
-                # Swap widgets.
-                # Remove the widget from its old layout (if it has one)
-                # Add the widget to the grid layout.
+    def dropEvent(self, event: QDropEvent):
+        if not event.mimeData().hasText():
+            self.exit_edit_mode()
+            event.ignore()
+            return
+        for i in range(self.grid_layout.count()):
+            column, row, column_span, row_span = self.grid_layout.getItemPosition(i)
+            if self.grid_layout.cellRect(row, column).contains(event.position().toPoint()):
+                break
+        else:
+            self.exit_edit_mode()
+            event.ignore()
+            return
+        # TODO: Add insertion of new row / column
+        self.grid_layout.itemAtPosition(row, column).widget().deleteLater()
+        self.grid_layout.removeItem(self.grid_layout.itemAtPosition(row, column))
+        label = QLabel(self)
+        label.setText(event.mimeData().text())
+        self.widgets.append(label)
+        self.grid_layout.addWidget(label, row, column)
+        self.exit_edit_mode()
+        event.accept()
 
 
 class SourceWidget(QWidget):
@@ -101,11 +143,11 @@ class SourceWidget(QWidget):
         if event.button() == Qt.MouseButton.LeftButton:
             drag = QDrag(self)
             mime_data = QMimeData()
-            trace = choice(["Widget 1", "Widget 2", "Widget 3"])
-            mime_data.setText(trace)
+            text = choice(["Widget 1", "Widget 2", "Widget 3"])
+            mime_data.setText(text)
             drag.setMimeData(mime_data)
             label = QLabel()
-            label.setText(trace)
+            label.setText(text)
             pixmap = QPixmap(self.size())
             pixmap.fill(self.palette().color(self.backgroundRole()))
             label.render(pixmap)
