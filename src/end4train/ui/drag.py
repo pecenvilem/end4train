@@ -66,18 +66,13 @@ class DropGrid(QWidget):
     """
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
+        self.edit_mode = False
         self.grid_layout = QGridLayout(self)
         self.widgets: list[QWidget] = []
-        for i in range(3):
-            for j in range(3):
-                if i == 1 and j == 1:
-                    center_widget = QLabel(self)
-                    center_widget.setText("Drop widgets here...")
-                    self.widgets.append(center_widget)
-                    self.grid_layout.addWidget(center_widget, 1, 1)
-                    continue
-                self.grid_layout.addWidget(self.get_placeholder(), i, j, Qt.AlignmentFlag.AlignCenter)
-        self.exit_edit_mode()
+        center_widget = QLabel(self)
+        center_widget.setText("Drop widgets here...")
+        self.widgets.append(center_widget)
+        self.grid_layout.addWidget(center_widget, 0, 0, Qt.AlignmentFlag.AlignCenter)
         self.setAcceptDrops(True)
 
     def get_placeholder(self) -> QLabel:
@@ -87,15 +82,37 @@ class DropGrid(QWidget):
         return placeholder
 
     def enter_edit_mode(self) -> None:
-        for i in range(self.grid_layout.count()):
-            self.grid_layout.itemAt(i).widget().show()
-
-    def exit_edit_mode(self) -> None:
+        # TODO: fix - column and row count doesn't decrease after 'exit_edit_mode';
+        #  keep all cells occupied with placeholder widgets but hide them when edit mode is not active
+        if self.edit_mode:
+            return
         for i in range(self.grid_layout.count()):
             widget = self.grid_layout.itemAt(i).widget()
-            if widget in self.widgets:
+            row, column, row_span, column_span = self.grid_layout.getItemPosition(i)
+            # self.grid_layout.removeWidget(widget)
+            # self.grid_layout.activate()
+            self.grid_layout.addWidget(widget, row + 1, column + 1, row_span, column_span, Qt.AlignmentFlag.AlignCenter)
+        new_row_count = self.grid_layout.rowCount() + 1
+        new_columns_count = self.grid_layout.columnCount() + 1
+        for row in range(new_row_count):
+            for column in range(new_columns_count):
+                if self.grid_layout.itemAtPosition(row, column) is None:
+                    self.grid_layout.addWidget(self.get_placeholder(), row, column, Qt.AlignmentFlag.AlignCenter)
+        self.edit_mode = True
+
+    def exit_edit_mode(self) -> None:
+        if not self.edit_mode:
+            return
+        current_widgets = [self.grid_layout.itemAt(i).widget() for i in range(self.grid_layout.count())]
+        for widget in current_widgets.copy():
+            if widget not in self.widgets:
+                self.grid_layout.removeWidget(widget)
+                widget.deleteLater()
                 continue
-            widget.hide()
+            row, column, row_span, column_span = self.grid_layout.getItemPosition(self.grid_layout.indexOf(widget))
+            self.grid_layout.removeWidget(widget)
+            self.grid_layout.addWidget(widget, row - 1, column - 1, row_span, column_span, Qt.AlignmentFlag.AlignCenter)
+        self.edit_mode = False
 
     def dragEnterEvent(self, event: QDragEnterEvent):
         if event.mimeData().hasText():
@@ -121,13 +138,11 @@ class DropGrid(QWidget):
             event.ignore()
             return
         # TODO: Add insertion of new row / column
-        self.grid_layout.itemAtPosition(row, column).widget().deleteLater()
-        self.grid_layout.removeItem(self.grid_layout.itemAtPosition(row, column))
+        self.exit_edit_mode()
         label = QLabel(self)
         label.setText(event.mimeData().text())
         self.widgets.append(label)
-        self.grid_layout.addWidget(label, row, column)
-        self.exit_edit_mode()
+        self.grid_layout.addWidget(label, row - 1, column - 1, Qt.AlignmentFlag.AlignCenter)
         event.accept()
 
 
