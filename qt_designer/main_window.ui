@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>932</width>
-    <height>742</height>
+    <width>830</width>
+    <height>675</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,10 +26,13 @@
    <property name="autoFillBackground">
     <bool>false</bool>
    </property>
-   <layout class="QHBoxLayout" name="horizontalLayout_3">
+   <layout class="QVBoxLayout" name="verticalLayout_9">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,0">
-      <item>
+     <widget class="QSplitter" name="splitter">
+      <property name="orientation">
+       <enum>Qt::Orientation::Horizontal</enum>
+      </property>
+      <widget class="QWidget" name="">
        <layout class="QVBoxLayout" name="verticalLayout_8">
         <item>
          <widget class="QGroupBox" name="groupBox">
@@ -141,15 +144,30 @@
          </widget>
         </item>
        </layout>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="gauges_group_box">
-        <property name="title">
-         <string>Current values</string>
+      </widget>
+      <widget class="QGroupBox" name="gauges_group_box">
+       <property name="title">
+        <string>Current values</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <property name="leftMargin">
+         <number>0</number>
         </property>
-       </widget>
-      </item>
-     </layout>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="DropGrid" name="widget" native="true"/>
+        </item>
+       </layout>
+      </widget>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -159,7 +177,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>932</width>
+     <width>830</width>
      <height>22</height>
     </rect>
    </property>
@@ -335,6 +353,12 @@
    <class>GraphicsLayoutWidget</class>
    <extends>QGraphicsView</extends>
    <header>pyqtgraph</header>
+  </customwidget>
+  <customwidget>
+   <class>DropGrid</class>
+   <extends>QWidget</extends>
+   <header>end4train.ui.drag</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

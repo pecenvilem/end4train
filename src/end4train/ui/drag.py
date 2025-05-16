@@ -4,10 +4,10 @@ from random import choice
 
 from PySide6.QtWidgets import (
     QApplication, QWidget, QGridLayout, QLabel,
-    QPushButton, QSizePolicy, QScrollArea, QVBoxLayout, QStyle, QMainWindow
+    QPushButton, QSizePolicy, QScrollArea, QVBoxLayout, QStyle, QMainWindow, QMenuBar
 )
 from PySide6.QtCore import Qt, QMimeData, QPoint, QRect, QSize, QPointF
-from PySide6.QtGui import QDrag, QPixmap, QPainter, QColor, QDragEnterEvent, QDropEvent, QIcon
+from PySide6.QtGui import QDrag, QPixmap, QPainter, QColor, QDragEnterEvent, QDropEvent, QIcon, QAction
 
 
 class DraggableWidget(QWidget):
@@ -50,15 +50,6 @@ class DraggableWidget(QWidget):
         else:
             super().mousePressEvent(event)
 
-class DraggableLabel(DraggableWidget):
-    """
-    A QLabel that can be dragged and dropped.
-    """
-    def __init__(self, text, parent=None):
-        super().__init__(parent)
-        self.label = QLabel(self)
-        self.label.setText(text)
-        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
 class DropGrid(QWidget):
     """
@@ -66,53 +57,133 @@ class DropGrid(QWidget):
     """
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
-        self.edit_mode = False
         self.grid_layout = QGridLayout(self)
-        self.widgets: list[QWidget] = []
+        self._edit_mode = True
+        menu = QMenuBar(self)
+        action = QAction(self)
+        action.setIcon(QIcon(QIcon.fromTheme(QIcon.ThemeIcon.DocumentProperties)))
+        action.triggered.connect(self.toggle_edit_mode)
+        menu.addAction(action)
+        self.grid_layout.setMenuBar(menu)
+        self._placeholders: list[QWidget] = []
+        for row in range(3):
+            for column in range(3):
+                self.place_placeholder(row, column)
         center_widget = QLabel(self)
         center_widget.setText("Drop widgets here...")
-        self.widgets.append(center_widget)
-        self.grid_layout.addWidget(center_widget, 0, 0, Qt.AlignmentFlag.AlignCenter)
+        self.place_widget(center_widget, 1, 1)
+        self.exit_edit_mode()
+
         self.setAcceptDrops(True)
 
-    def get_placeholder(self) -> QLabel:
-        placeholder = QLabel(self)
+    def place_widget(self, widget: QWidget, row: int, column: int) -> None:
+        # get LayoutItem currently at [row, column] and delete it from layout and Qt pointers
+        current_item = self.grid_layout.itemAtPosition(row, column)
+        try:
+            self._placeholders.remove(current_item.widget())
+        except ValueError:
+            pass
+        current_item.widget().hide()
+        current_item.widget().deleteLater()
+        self.grid_layout.removeItem(current_item)
+
+
+        # insert new widget at [row, column] in layout
+        self.grid_layout.addWidget(widget, row, column, Qt.AlignmentFlag.AlignCenter)
+        if row == 0:
+            self.shift_rows()
+        if column == 0:
+            self.shift_columns()
+        if row == self.grid_layout.rowCount() - 1:
+            self.add_row()
+        if column == self.grid_layout.columnCount() - 1:
+            self.add_column()
+
+    def place_placeholder(self, row: int, column: int) -> None:
+        placeholder = self.get_placeholder()
+        self.grid_layout.addWidget(placeholder, row, column, Qt.AlignmentFlag.AlignCenter)
+        self._placeholders.append(placeholder)
+
+    def shift_rows(self) -> None:
+        last_row = self.grid_layout.rowCount() - 1
+        last_column = self.grid_layout.columnCount() - 1
+        for row in range(last_row, -1, -1):
+            for column in range(last_column, -1, -1):
+                widget = self.grid_layout.itemAtPosition(row, column).widget()
+                self.grid_layout.removeWidget(widget)
+                self.grid_layout.addWidget(widget, row + 1, column, Qt.AlignmentFlag.AlignCenter)
+        for column in range(self.grid_layout.columnCount()):
+            self.place_placeholder(0, column)
+
+    def shift_columns(self) -> None:
+        last_row = self.grid_layout.rowCount() - 1
+        last_column = self.grid_layout.columnCount() - 1
+        for row in range(last_row, -1, -1):
+            for column in range(last_column, -1, -1):
+                widget = self.grid_layout.itemAtPosition(row, column).widget()
+                self.grid_layout.removeWidget(widget)
+                self.grid_layout.addWidget(widget, row, column + 1, Qt.AlignmentFlag.AlignCenter)
+        for row in range(self.grid_layout.rowCount()):
+            self.place_placeholder(row, 0)
+
+    def add_row(self) -> None:
+        next_row = self.grid_layout.rowCount()
+        for column in range(self.grid_layout.columnCount()):
+            self.place_placeholder(next_row, column)
+
+    def add_column(self) -> None:
+        next_column = self.grid_layout.columnCount()
+        for row in range(self.grid_layout.rowCount()):
+            self.place_placeholder(row, next_column)
+
+    def get_row_col_from_position(self, pos: QPointF) -> tuple[int, int]:
+        """
+        Helper method to determine the row and column of a grid cell
+        from a given position within the grid.
+        """
+        # Get the number of rows and columns in the grid.
+        rows = self.grid_layout.rowCount()
+        cols = self.grid_layout.columnCount()
+
+        # Calculate the width and height of the grid.
+        grid_width = self.geometry().width()
+        grid_height = self.geometry().height()
+
+        # Calculate the width and height of each cell.
+        cell_width = grid_width / cols
+        cell_height = grid_height / rows
+
+        # Calculate the row and column based on the position.
+        row = int(pos.y() / cell_height)
+        col = int(pos.x() / cell_width)
+
+        # Make sure the row and column are within the valid range.
+        if not (0 <= row < rows and 0 <= col < cols):
+            raise ValueError(f"Row: {row}, column: {col} out of bounds of {rows}, {cols}")
+        return row, col
+
+    def get_placeholder(self) -> QWidget:
+        placeholder = QPushButton(self)
         icon = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.ListAdd))
-        placeholder.setPixmap(icon.pixmap(QSize(30, 30)))
+        placeholder.setIcon(icon)
         return placeholder
 
+    def toggle_edit_mode(self) -> None:
+        if self._edit_mode:
+            self.exit_edit_mode()
+        else:
+            self.enter_edit_mode()
+
+
     def enter_edit_mode(self) -> None:
-        # TODO: fix - column and row count doesn't decrease after 'exit_edit_mode';
-        #  keep all cells occupied with placeholder widgets but hide them when edit mode is not active
-        if self.edit_mode:
-            return
-        for i in range(self.grid_layout.count()):
-            widget = self.grid_layout.itemAt(i).widget()
-            row, column, row_span, column_span = self.grid_layout.getItemPosition(i)
-            # self.grid_layout.removeWidget(widget)
-            # self.grid_layout.activate()
-            self.grid_layout.addWidget(widget, row + 1, column + 1, row_span, column_span, Qt.AlignmentFlag.AlignCenter)
-        new_row_count = self.grid_layout.rowCount() + 1
-        new_columns_count = self.grid_layout.columnCount() + 1
-        for row in range(new_row_count):
-            for column in range(new_columns_count):
-                if self.grid_layout.itemAtPosition(row, column) is None:
-                    self.grid_layout.addWidget(self.get_placeholder(), row, column, Qt.AlignmentFlag.AlignCenter)
-        self.edit_mode = True
+        self._edit_mode = True
+        for placeholder in self._placeholders:
+            placeholder.show()
 
     def exit_edit_mode(self) -> None:
-        if not self.edit_mode:
-            return
-        current_widgets = [self.grid_layout.itemAt(i).widget() for i in range(self.grid_layout.count())]
-        for widget in current_widgets.copy():
-            if widget not in self.widgets:
-                self.grid_layout.removeWidget(widget)
-                widget.deleteLater()
-                continue
-            row, column, row_span, column_span = self.grid_layout.getItemPosition(self.grid_layout.indexOf(widget))
-            self.grid_layout.removeWidget(widget)
-            self.grid_layout.addWidget(widget, row - 1, column - 1, row_span, column_span, Qt.AlignmentFlag.AlignCenter)
-        self.edit_mode = False
+        self._edit_mode = False
+        for placeholder in self._placeholders:
+            placeholder.hide()
 
     def dragEnterEvent(self, event: QDragEnterEvent):
         if event.mimeData().hasText():
@@ -129,20 +200,20 @@ class DropGrid(QWidget):
             self.exit_edit_mode()
             event.ignore()
             return
-        for i in range(self.grid_layout.count()):
-            column, row, column_span, row_span = self.grid_layout.getItemPosition(i)
-            if self.grid_layout.cellRect(row, column).contains(event.position().toPoint()):
-                break
-        else:
+        try:
+            row, column = self.get_row_col_from_position(event.position())
+        except ValueError:
             self.exit_edit_mode()
             event.ignore()
             return
-        # TODO: Add insertion of new row / column
-        self.exit_edit_mode()
-        label = QLabel(self)
+
+        widget = DraggableWidget(self)
+        label = QLabel(widget)
         label.setText(event.mimeData().text())
-        self.widgets.append(label)
-        self.grid_layout.addWidget(label, row - 1, column - 1, Qt.AlignmentFlag.AlignCenter)
+        widget.setLayout(QVBoxLayout(widget))
+        widget.layout().addWidget(label)
+        self.place_widget(widget, row, column)
+        self.exit_edit_mode()
         event.accept()
 
 

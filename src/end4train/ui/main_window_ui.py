@@ -20,16 +20,17 @@ from PySide6.QtQuickWidgets import QQuickWidget
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDockWidget, QGroupBox,
     QHBoxLayout, QLabel, QLayout, QListView,
     QMainWindow, QMenu, QMenuBar, QPushButton,
-    QRadioButton, QSizePolicy, QSpacerItem, QStatusBar,
-    QVBoxLayout, QWidget)
+    QRadioButton, QSizePolicy, QSpacerItem, QSplitter,
+    QStatusBar, QVBoxLayout, QWidget)
 
+from end4train.ui.drag import DropGrid
 from pyqtgraph import GraphicsLayoutWidget
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(932, 742)
+        MainWindow.resize(830, 675)
         icon = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.Computer))
         MainWindow.setWindowIcon(icon)
         MainWindow.setDockNestingEnabled(True)
@@ -61,13 +62,17 @@ class Ui_MainWindow(object):
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.centralwidget.setAutoFillBackground(False)
-        self.horizontalLayout_3 = QHBoxLayout(self.centralwidget)
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.verticalLayout_8 = QVBoxLayout()
+        self.verticalLayout_9 = QVBoxLayout(self.centralwidget)
+        self.verticalLayout_9.setObjectName(u"verticalLayout_9")
+        self.splitter = QSplitter(self.centralwidget)
+        self.splitter.setObjectName(u"splitter")
+        self.splitter.setOrientation(Qt.Orientation.Horizontal)
+        self.widget = QWidget(self.splitter)
+        self.widget.setObjectName(u"widget")
+        self.verticalLayout_8 = QVBoxLayout(self.widget)
         self.verticalLayout_8.setObjectName(u"verticalLayout_8")
-        self.groupBox = QGroupBox(self.centralwidget)
+        self.verticalLayout_8.setContentsMargins(0, 0, 0, 0)
+        self.groupBox = QGroupBox(self.widget)
         self.groupBox.setObjectName(u"groupBox")
         self.verticalLayout_7 = QVBoxLayout(self.groupBox)
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
@@ -111,12 +116,12 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_6 = QVBoxLayout()
         self.verticalLayout_6.setObjectName(u"verticalLayout_6")
-        self.label_3 = QLabel(self.centralwidget)
+        self.label_3 = QLabel(self.widget)
         self.label_3.setObjectName(u"label_3")
 
         self.verticalLayout_6.addWidget(self.label_3)
 
-        self.traces_list_view = QListView(self.centralwidget)
+        self.traces_list_view = QListView(self.widget)
         self.traces_list_view.setObjectName(u"traces_list_view")
 
         self.verticalLayout_6.addWidget(self.traces_list_view)
@@ -124,7 +129,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_8.addLayout(self.verticalLayout_6)
 
-        self.groupBox_3 = QGroupBox(self.centralwidget)
+        self.groupBox_3 = QGroupBox(self.widget)
         self.groupBox_3.setObjectName(u"groupBox_3")
         self.verticalLayout_5 = QVBoxLayout(self.groupBox_3)
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
@@ -148,16 +153,20 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_8.addWidget(self.groupBox_3)
 
-
-        self.horizontalLayout_2.addLayout(self.verticalLayout_8)
-
-        self.gauges_group_box = QGroupBox(self.centralwidget)
+        self.splitter.addWidget(self.widget)
+        self.gauges_group_box = QGroupBox(self.splitter)
         self.gauges_group_box.setObjectName(u"gauges_group_box")
+        self.verticalLayout_2 = QVBoxLayout(self.gauges_group_box)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.widget1 = DropGrid(self.gauges_group_box)
+        self.widget1.setObjectName(u"widget1")
 
-        self.horizontalLayout_2.addWidget(self.gauges_group_box)
+        self.verticalLayout_2.addWidget(self.widget1)
 
+        self.splitter.addWidget(self.gauges_group_box)
 
-        self.horizontalLayout_3.addLayout(self.horizontalLayout_2)
+        self.verticalLayout_9.addWidget(self.splitter)
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusBar = QStatusBar(MainWindow)
@@ -165,7 +174,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusBar)
         self.menuBar = QMenuBar(MainWindow)
         self.menuBar.setObjectName(u"menuBar")
-        self.menuBar.setGeometry(QRect(0, 0, 932, 22))
+        self.menuBar.setGeometry(QRect(0, 0, 830, 22))
         self.menuFile = QMenu(self.menuBar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuWindow = QMenu(self.menuBar)
