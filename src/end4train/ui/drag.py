@@ -174,6 +174,21 @@ class DropGrid(QWidget):
         else:
             self.enter_edit_mode()
 
+    def is_row_empty(self, row: int) -> bool:
+        if not (0 <= row < self.grid_layout.rowCount()):
+            return True
+        for column in range(self.grid_layout.columnCount()):
+            if self.grid_layout.itemAtPosition(row, column).widget() not in self._placeholders:
+                return False
+        return True
+
+    def is_column_empty(self, column: int):
+        if not 0 <= column < self.grid_layout.columnCount():
+            return True
+        for row in range(self.grid_layout.rowCount()):
+            if self.grid_layout.itemAtPosition(row, column).widget() not in self._placeholders:
+                return False
+        return True
 
     def enter_edit_mode(self) -> None:
         self._edit_mode = True

@@ -18,10 +18,10 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QTransform)
 from PySide6.QtQuickWidgets import QQuickWidget
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDockWidget, QGroupBox,
-    QHBoxLayout, QLabel, QLayout, QListView,
+    QHBoxLayout, QHeaderView, QLabel, QLayout,
     QMainWindow, QMenu, QMenuBar, QPushButton,
     QRadioButton, QSizePolicy, QSpacerItem, QSplitter,
-    QStatusBar, QVBoxLayout, QWidget)
+    QStatusBar, QTreeView, QVBoxLayout, QWidget)
 
 from end4train.ui.drag import DropGrid
 from pyqtgraph import GraphicsLayoutWidget
@@ -67,12 +67,12 @@ class Ui_MainWindow(object):
         self.splitter = QSplitter(self.centralwidget)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setOrientation(Qt.Orientation.Horizontal)
-        self.widget = QWidget(self.splitter)
-        self.widget.setObjectName(u"widget")
-        self.verticalLayout_8 = QVBoxLayout(self.widget)
+        self.layoutWidget = QWidget(self.splitter)
+        self.layoutWidget.setObjectName(u"layoutWidget")
+        self.verticalLayout_8 = QVBoxLayout(self.layoutWidget)
         self.verticalLayout_8.setObjectName(u"verticalLayout_8")
         self.verticalLayout_8.setContentsMargins(0, 0, 0, 0)
-        self.groupBox = QGroupBox(self.widget)
+        self.groupBox = QGroupBox(self.layoutWidget)
         self.groupBox.setObjectName(u"groupBox")
         self.verticalLayout_7 = QVBoxLayout(self.groupBox)
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
@@ -116,20 +116,20 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_6 = QVBoxLayout()
         self.verticalLayout_6.setObjectName(u"verticalLayout_6")
-        self.label_3 = QLabel(self.widget)
+        self.label_3 = QLabel(self.layoutWidget)
         self.label_3.setObjectName(u"label_3")
 
         self.verticalLayout_6.addWidget(self.label_3)
 
-        self.traces_list_view = QListView(self.widget)
-        self.traces_list_view.setObjectName(u"traces_list_view")
+        self.traces_tree_view = QTreeView(self.layoutWidget)
+        self.traces_tree_view.setObjectName(u"traces_tree_view")
 
-        self.verticalLayout_6.addWidget(self.traces_list_view)
+        self.verticalLayout_6.addWidget(self.traces_tree_view)
 
 
         self.verticalLayout_8.addLayout(self.verticalLayout_6)
 
-        self.groupBox_3 = QGroupBox(self.widget)
+        self.groupBox_3 = QGroupBox(self.layoutWidget)
         self.groupBox_3.setObjectName(u"groupBox_3")
         self.verticalLayout_5 = QVBoxLayout(self.groupBox_3)
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
@@ -153,16 +153,16 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_8.addWidget(self.groupBox_3)
 
-        self.splitter.addWidget(self.widget)
+        self.splitter.addWidget(self.layoutWidget)
         self.gauges_group_box = QGroupBox(self.splitter)
         self.gauges_group_box.setObjectName(u"gauges_group_box")
         self.verticalLayout_2 = QVBoxLayout(self.gauges_group_box)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.widget1 = DropGrid(self.gauges_group_box)
-        self.widget1.setObjectName(u"widget1")
+        self.widget = DropGrid(self.gauges_group_box)
+        self.widget.setObjectName(u"widget")
 
-        self.verticalLayout_2.addWidget(self.widget1)
+        self.verticalLayout_2.addWidget(self.widget)
 
         self.splitter.addWidget(self.gauges_group_box)
 

@@ -41,15 +41,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.toggle_listener_callback = toggle_listener_callback
         self.request_download_callback = request_download_callback
         self.select_traces_callback = select_traces_callback
-        self.traces_list_view.setModel(trace_item_model)
-        self.traces_list_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.traces_tree_view.setModel(trace_item_model)
+        self.traces_tree_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
         self.plot.setBackground("white")
         # TODO: replace PyQtGraph with pglive https://github.com/domarm-comat/pglive/tree/main
 
         self.record_box.stateChanged.connect(self.toggle_listener)
         self.load_btn.clicked.connect(self.request_download)
-        self.traces_list_view.clicked.connect(self.request_trace_change)
+        self.traces_tree_view.clicked.connect(self.request_trace_change)
 
         self.map.setSource(QUrl.fromLocalFile("ui/map.qml"))
         if self.map.errors():
@@ -90,7 +90,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.select_traces_callback(self.get_selected_traces())
 
     def get_selected_traces(self):
-        return list(item.data() for item in self.traces_list_view.selectionModel().selectedRows())
+        return list(item.data() for item in self.traces_tree_view.selectionModel().selectedRows())
 
     def closeEvent(self, event: QCloseEvent) -> bool:
         self.save_layout()

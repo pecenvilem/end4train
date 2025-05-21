@@ -346,14 +346,14 @@ async def main() -> None:
     store = KSYInfoStore(RECORD_OBJECT_KSY_PATH)
     hot = HoT(ksy_info_store=store, sample_data_folder=HOT_SAMPLE_PARQUET_FOLDER, local_host=TEST_HOT_HOST)
     eot = EoT(ksy_info_store=store, sample_data_folder=EOT_SAMPLE_PARQUET_FOLDER, local_host=TEST_EOT_HOST)
-    master = Master(local_host=TEST_MASTER_HOST)
+    master = Master(local_host="0.0.0.0")
 
     async with create_task_group() as tg:
         # noinspection PyTypeChecker
-        # tg.start_soon(master.run)
+        tg.start_soon(master.run)
 
         # noinspection PyTypeChecker
-        tg.start_soon(hot.run)
+        # tg.start_soon(hot.run)
 
         # noinspection PyTypeChecker
         # tg.start_soon(eot.run)

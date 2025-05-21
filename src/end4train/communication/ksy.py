@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import IntEnum, Enum
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Type
 from collections.abc import Mapping
 
 from yaml import safe_load
@@ -60,7 +60,7 @@ class KaitaiDataObject:
     kaitai_type: KaitaiType
 
 
-def select_device(object_type_enum_name: str, device_enum: type(Device)) -> Device:
+def select_device(object_type_enum_name: str, device_enum: Type[Device]) -> Device:
     matches = [device for device in device_enum if object_type_enum_name.endswith(device.value.object_type_enum_suffix)]
     if len(matches) > 1:
         raise AmbiguousObjectTypeEnumNameError(object_type_enum_name, matches)
